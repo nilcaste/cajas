@@ -1,6 +1,10 @@
 /* =============================================================================
-   Cajas — adaptador de Supabase (local-first)
+   Cajas — adaptador de la nube (local-first)
    =============================================================================
+   Desde el 20-10-2026 los DATOS viven en Cloudflare D1, detrás de la API del
+   hub (/cajas/api, ver dashboard-hub/functions/cajas/api). Supabase solo
+   queda para guardar las FOTOS hasta que se pasen a R2. El nombre del fichero
+   se queda para no tocar los imports.
    Cumple EXACTAMENTE la interfaz de `js/datos.js` (síncrona, devuelve copias).
    Las vistas no se enteran de que hay red: leen de una caché en memoria y
    escriben en ella; el viaje a Supabase pasa por detrás.
@@ -52,6 +56,33 @@ const ESPEJO = 'cajas.v1';
 const COLA = 'cajas.cola';
 const FUENTE = 'supabase';
 const CDN = 'https://esm.sh/@supabase/supabase-js@2';
+
+/* La API de D1. Hace de "cliente": ejecutar() y pull() hablan con ella. */
+const API = '/cajas/api';
+/* Sin realtime: mientras la pestaña está a la vista se pregunta cada poco. */
+const SONDEO = 15000;
+
+async function errorDe(r) {
+  const e = new Error('HTTP ' + r.status);
+  e.status = r.status;
+  return e;
+}
+
+const api = {
+  async todo() {
+    const r = await fetch(API + '/todo', { cache: 'no-store' });
+    if (!r.ok) throw await errorDe(r);
+    return r.json();
+  },
+  async enviar(ruta, cuerpo) {
+    const r = await fetch(API + '/' + ruta, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Cajas': '1' },
+      body: JSON.stringify(cuerpo)
+    });
+    if (!r.ok) throw await errorDe(r);
+  }
+};
 
 /* Reintentos de la cola: 1 s, 2 s, 4 s… con techo de 30 s. */
 const ESPERA_MIN = 1000;
@@ -209,6 +240,9 @@ function recordarSesion(hay) {
 }
 
 async function arrancarSesion() {
+  /* Sin puerta no hay sesión que averiguar: el adaptador ya se conectó a la
+     API al nacer. Supabase solo se carga si hace falta subir una foto. */
+  if (!PUERTA) return null;
   const cli = await conseguirCliente();
   const { data } = await cli.auth.getSession();
   sesionActual = (data && data.session) || null;
@@ -218,14 +252,14 @@ async function arrancarSesion() {
     const habia = !!sesionActual;
     sesionActual = sesion || null;
     recordarSesion(!!sesionActual);
-    if (sesionActual) { if (adaptador) adaptador.conectar(cli); }
+    if (sesionActual) { if (adaptador) adaptador.conectar(api); }
     /* Sin puerta el adaptador vive conectado como `anon`: cerrar sesión no
        lo desengancha, porque nunca dependió de tener una. */
     else if (habia && PUERTA && adaptador) adaptador.desconectar();
     avisarSesion();
   });
 
-  if ((sesionActual || !PUERTA) && adaptador) adaptador.conectar(cli);
+  if (sesionActual && adaptador) adaptador.conectar(api);
   return sesionActual;
 }
 
@@ -326,7 +360,7 @@ export function SupabaseAdapter() {
   let estado = leerEspejo();
   let cola = leerCola();
   let cli = null;              // cliente CON sesión; null = trabajamos offline
-  let canal = null;
+  let sondeo = null;
   let procesando = false;
   let reintento = null;
   let esperaActual = ESPERA_MIN;
@@ -589,18 +623,9 @@ export function SupabaseAdapter() {
   }
 
   /* Los borrados son idempotentes: borrar lo que ya no está no es un error
-     en PostgREST, así que un reintento de más nunca hace daño. */
+     en la API, así que un reintento de más nunca hace daño. */
   async function ejecutar(op) {
-    if (op.tipo === 'borrar') {
-      const consulta = op.tabla === 'stock'
-        ? cli.from('stock').delete().eq('item_id', op.fila.item_id).eq('caja_id', op.fila.caja_id)
-        : cli.from(op.tabla).delete().eq('id', op.fila.id);
-      const { error } = await consulta;
-      if (error) throw error;
-      return;
-    }
-    const { error } = await cli.from(op.tabla).upsert(op.fila);
-    if (error) throw error;
+    await cli.enviar(op.tipo === 'borrar' ? 'borrar' : 'upsert', { tabla: op.tabla, fila: op.fila });
   }
 
   async function procesarCola() {
@@ -649,13 +674,8 @@ export function SupabaseAdapter() {
 
   async function pull() {
     if (!cli) return;
-    const [rc, ri, rs] = await Promise.all([
-      cli.from('cajas').select('*').order('creado', { ascending: true }),
-      cli.from('items').select('*').order('creado', { ascending: true }),
-      cli.from('stock').select('*')
-    ]);
-    const error = rc.error || ri.error || rs.error;
-    if (error) throw error;
+    const datosNube = await cli.todo();
+    const rc = { data: datosNube.cajas }, ri = { data: datosNube.items }, rs = { data: datosNube.stock };
 
     const cajas = (rc.data || []).map(aCaja);
     const items = (ri.data || []).map(aItem);
@@ -665,13 +685,18 @@ export function SupabaseAdapter() {
     const stock = (rs.data || []).map(aLinea)
       .sort((a, b) => (orden.get(a.itemId) ?? 1e9) - (orden.get(b.itemId) ?? 1e9));
 
-    ordenSoportado = !!(rs.data && rs.data[0] && Object.prototype.hasOwnProperty.call(rs.data[0], 'orden'));
-    cajasOrdenables = !!(rc.data && rc.data[0] && Object.prototype.hasOwnProperty.call(rc.data[0], 'orden'));
+    /* D1 tiene las dos columnas de orden desde el principio. */
+    ordenSoportado = true;
+    cajasOrdenables = true;
 
+    const antes = JSON.stringify(estado);
     estado = { cajas, items, stock };
     /* Lo que aún no ha subido manda sobre lo que acabamos de bajar: si no, un
        cambio hecho sin cobertura desaparecería de la pantalla al reconciliar. */
     aplicarCola();
+    /* Con sondeo, casi siempre no ha cambiado nada: repintar igualmente
+       rehace todas las <img> y se ve como un parpadeo. */
+    if (JSON.stringify(estado) === antes) return;
     emitir('sincronizado', {});
   }
 
@@ -782,18 +807,14 @@ export function SupabaseAdapter() {
     emitir('remoto', { tabla });
   }
 
+  /* D1 no avisa de los cambios: lo que toca el otro aparece en el siguiente
+     sondeo (o al volver a la pestaña). Con la cola pendiente no se sondea,
+     para no pisar en pantalla lo que aún no ha subido. */
   function escuchar() {
-    if (canal || !cli) return;
-    const opciones = t => ({ event: '*', schema: 'public', table: t });
-    canal = cli.channel('cajas-en-vivo')
-      .on('postgres_changes', opciones('cajas'), m => aplicarRemoto('cajas', m))
-      .on('postgres_changes', opciones('items'), m => aplicarRemoto('items', m))
-      .on('postgres_changes', opciones('stock'), m => aplicarRemoto('stock', m))
-      .subscribe(situacion => {
-        /* Cada (re)conexión trae un pull: si el canal se cayó un rato, los
-           eventos de ese hueco no vuelven solos. */
-        if (situacion === 'SUBSCRIBED') pullDefendido();
-      });
+    if (sondeo || !cli) return;
+    sondeo = setInterval(() => {
+      if (!document.hidden && !cola.length) pullDefendido();
+    }, SONDEO);
   }
 
   /* ======================================================= CONEXIÓN ======== */
@@ -806,8 +827,8 @@ export function SupabaseAdapter() {
   }
 
   function desconectar() {
-    if (canal && cli) { try { cli.removeChannel(canal); } catch (e) { /* da igual */ } }
-    canal = null;
+    clearInterval(sondeo);
+    sondeo = null;
     cli = null;
     clearTimeout(reintento);
     reintento = null;
@@ -847,6 +868,8 @@ export function SupabaseAdapter() {
     conectar, desconectar,
     pendientes: () => cola.length
   };
+  /* Sin puerta, a la API desde el primer momento. */
+  if (!PUERTA) conectar(api);
   return adaptador;
 }
 
