@@ -2,9 +2,10 @@
    Cajas — adaptador de la nube (local-first)
    =============================================================================
    Desde el 20-10-2026 los DATOS viven en Cloudflare D1, detrás de la API del
-   hub (/cajas/api, ver dashboard-hub/functions/cajas/api). Supabase solo
-   queda para guardar las FOTOS hasta que se pasen a R2. El nombre del fichero
-   se queda para no tocar los imports.
+   hub (/cajas/api, ver dashboard-hub/functions/cajas/api), y las FOTOS en R2
+   (/cajas/fotos/…). Supabase ya no se usa: el nombre del fichero se queda
+   para no tocar los imports, y lo de la puerta (PUERTA) sigue aquí por si
+   algún día se vuelve a cerrar con correo.
    Cumple EXACTAMENTE la interfaz de `js/datos.js` (síncrona, devuelve copias).
    Las vistas no se enteran de que hay red: leen de una caché en memoria y
    escriben en ella; el viaje a Supabase pasa por detrás.
@@ -319,24 +320,18 @@ export const nube = {
     return true;
   },
 
-  /* Sube una foto ya reducida al bucket público `fotos` y devuelve su URL.
-     El nombre lo pone el reloj más un pellizco de azar: no hace falta que
-     signifique nada, sólo que no choque con otro. */
+  /* Sube una foto ya reducida a R2 (por la API del hub) y devuelve su URL.
+     El nombre lo pone el servidor. Si se ha llegado al límite de espacio o
+     de fotos del día, el servidor dice que no y se avisa con su mensaje. */
   async subirFoto(blob) {
-    const cli = await conseguirCliente();
-    const tipo = blob.type || 'image/jpeg';
-    /* La extensión sale del tipo: las fotos son JPEG y los recortes, WebP
-       (o PNG si el navegador no sabe escribir WebP). */
-    const extension = { 'image/png': '.png', 'image/webp': '.webp' }[tipo] || '.jpg';
-    const nombre = Date.now().toString(36) + '-' +
-                   Math.random().toString(36).slice(2, 8) + extension;
-    const { error } = await cli.storage.from('fotos').upload(nombre, blob, {
-      contentType: tipo,
-      cacheControl: '31536000'
+    const r = await fetch(API + '/foto', {
+      method: 'POST',
+      headers: { 'Content-Type': blob.type || 'image/jpeg', 'X-Cajas': '1' },
+      body: blob
     });
-    if (error) throw error;
-    const { data } = cli.storage.from('fotos').getPublicUrl(nombre);
-    return data.publicUrl;
+    const cuerpo = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(cuerpo.error || 'No se ha podido subir la foto');
+    return cuerpo.url;
   },
 
   async salir() {

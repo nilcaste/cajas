@@ -41,3 +41,13 @@ CREATE TABLE IF NOT EXISTS stock (
 
 CREATE INDEX IF NOT EXISTS stock_caja_idx ON stock (caja_id);
 CREATE INDEX IF NOT EXISTS stock_item_idx ON stock (item_id);
+
+-- ------------------------------------------------------------------ fotos --
+-- Las fotos viven en R2 (bucket `cajas-fotos`, binding FOTOS). Esta tabla lleva
+-- la cuenta de lo que ocupan, para frenar antes del límite gratis de R2.
+CREATE TABLE IF NOT EXISTS fotos (
+  nombre      TEXT PRIMARY KEY,
+  bytes       INTEGER NOT NULL,
+  creado      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS fotos_creado_idx ON fotos (creado);
