@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prueba nueva Home · Cajas</title>
+<!-- PÁGINA DE PRUEBA AUTOCONTENIDA.
+     No carga styles.css: todo el CSS vive aquí. Solo móvil (diseño a 375 px).
+     Planteamiento: referencia 1 (Bond). Piel: referencia 2 (Salung). -->
+<style>
+  :root {
+    --fondo:      #EDEAE4;  /* greige cálido */
+    --tarjeta:    #FFFFFF;
+    --hueso:      #FBF9F5;
+    --tinta:      #26221D;
+    --tinta-2:    #8F8A82;
+    --carbon:     #2B2722;
+    --naranja:    #D2652A;  /* acento puntual, nunca botones */
+
+    --sombra-s: 0 2px 10px rgba(38,34,29,.05);
+    --sombra:   0 10px 28px rgba(38,34,29,.09);
+    --sombra-l: 0 16px 40px rgba(38,34,29,.14);
+
+    --r-l: 22px;
+    --r-pill: 999px;
+
+    --fuente: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+    --alto-pie: 150px; /* píldora de búsqueda + fila de iconos */
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; background: var(--fondo); }
+
+  body {
+    margin: 0;
+    background: var(--fondo);
+    color: var(--tinta);
+    font-family: var(--fuente);
+    font-size: 16px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: calc(var(--alto-pie) + env(safe-area-inset-bottom));
+  }
+
+  h1 { margin: 0; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; }
+
+  :focus-visible { outline: 2px solid var(--tinta); outline-offset: 3px; border-radius: 10px; }
+
+  .pantalla {
+    max-width: 430px;
+    margin: 0 auto;
+    padding: 0 18px;
+  }
+
+  /* ---------- Cabecera: wordmark centrado + "+" fino a la derecha -------- */
+
+  .cabecera {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 64px;
+    margin-bottom: 10px;
+  }
+
+  .wordmark {
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    text-transform: lowercase;
+  }
+
+  .cabecera__mas {
+    position: absolute;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: var(--r-pill);
+    background: transparent;
+    color: var(--tinta);
+    cursor: pointer;
+  }
+  .cabecera__mas:hover { background: rgba(38,34,29,.06); }
+
+  /* ---------- Retícula de cajas ----------------------------------------- */
+
+  .rejilla {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 26px 14px;
+    padding-top: 4px;
+  }
+
+  .celda { display: block; }
+
+  .polaroid {
+    position: relative;
+    display: block;
+    background: var(--tarjeta);
+    border-radius: var(--r-l);
+    box-shadow: var(--sombra);
+    padding: 16px 14px 20px;
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+
+  /* Rotación sutil alternada, como fotos sueltas sobre la mesa */
+  .celda:nth-child(4n+1) .polaroid { transform: rotate(-2.5deg); }
+  .celda:nth-child(4n+2) .polaroid { transform: rotate(1.5deg); }
+  .celda:nth-child(4n+3) .polaroid { transform: rotate(-1deg); }
+  .celda:nth-child(4n+4) .polaroid { transform: rotate(2deg); }
+  .celda .polaroid:hover { transform: rotate(0deg); box-shadow: var(--sombra-l); }
+
+  .ilustracion-caja {
+    display: block;
+    width: 100%;
+    max-width: 130px;
+    margin: 0 auto;
+    color: var(--tinta-2);
+  }
+  .ilustracion-caja svg { display: block; width: 100%; height: auto; }
+  .ilustracion-caja .foto-caja {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 0;
+    mix-blend-mode: multiply;
+  }
+
+  /* Píldora monospace solapada en la esquina inferior de la foto */
+  .etiqueta {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    display: inline-flex;
+    align-items: center;
+    background: var(--tarjeta);
+    border-radius: var(--r-pill);
+    box-shadow: var(--sombra-s), 0 0 0 3px var(--tarjeta);
+    padding: 4px 9px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+    color: var(--tinta);
+    white-space: nowrap;
+  }
+
+  .celda__pie { margin-top: 12px; text-align: center; }
+  .celda__nombre {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
+  }
+  .celda__cuenta {
+    margin-top: 1px;
+    font-size: 13px;
+    color: var(--tinta-2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- Pie flotante: búsqueda + iconos sobre el fondo ------------- */
+
+  .pie {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    padding: 0 18px calc(10px + env(safe-area-inset-bottom));
+    background: linear-gradient(to bottom, rgba(237,234,228,0) 0%, var(--fondo) 34%);
+  }
+
+  .buscar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 394px;
+    margin: 0 auto;
+    height: 54px;
+    padding: 0 20px;
+    border-radius: var(--r-pill);
+    background: var(--tarjeta);
+    box-shadow: var(--sombra-l);
+    color: var(--tinta-2);
+    font-size: 16px;
+  }
+  .buscar .icono { color: var(--tinta); }
+
+  /* Iconos de trazo directamente sobre el fondo, sin contenedor */
+  .tabs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 56px;
+    max-width: 394px;
+    margin: 0 auto;
+    padding-top: 6px;
+  }
+
+  .tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 52px;
+    color: var(--tinta-2);
+  }
+  .tab .icono { width: 25px; height: 25px; }
+  .tab--activo { color: var(--tinta); }
+  .tab--activo .icono { fill: var(--tinta); stroke: var(--tinta); }
+
+  .icono {
+    width: 22px;
+    height: 22px;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* ---------- Aviso efímero (mock) -------------------------------------- */
+
+  .aviso {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--alto-pie) + 16px + env(safe-area-inset-bottom));
+    transform: translate(-50%, 8px);
+    background: var(--carbon);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: var(--r-pill);
+    font-size: 15px;
+    font-weight: 600;
+    box-shadow: var(--sombra-l);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+    z-index: 40;
+  }
+  .aviso--visible { opacity: 1; transform: translate(-50%, 0); }
+
+  /* Nota de maqueta */
+  .nota-maqueta {
+    max-width: 430px;
+    margin: 22px auto 0;
+    padding: 0 18px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--tinta-2);
+    text-align: center;
+  }
+  .nota-maqueta a { border-bottom: 1px solid currentColor; }
+  .nota-maqueta .punto { color: var(--naranja); }
+</style>
+</head>
+<body>
+
+<div class="pantalla">
+
+  <header class="cabecera">
+    <h1 class="wordmark">cajas</h1>
+    <button type="button" class="cabecera__mas" id="nueva" aria-label="Nueva caja">
+      <svg class="icono" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+  </header>
+
+  <div class="rejilla" id="rejilla"></div>
+
+</div>
+
+<p class="nota-maqueta"><span class="punto">●</span> prueba de estilo &middot; <a href="index.html">volver a las maquetas</a></p>
+
+<div class="pie">
+  <a class="buscar" href="inventario.html">
+    <svg class="icono" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>
+    </svg>
+    ¿Dónde está…?
+  </a>
+
+  <nav class="tabs" aria-label="Secciones">
+    <a class="tab tab--activo" href="home-prueba.html" aria-current="page" aria-label="Cajas">
+      <svg class="icono" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3.5" y="7.5" width="17" height="12.5" rx="2.5"/>
+        <path d="M3.5 11.5h17"/>
+      </svg>
+    </a>
+    <a class="tab" href="inventario.html" aria-label="Inventario">
+      <svg class="icono" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M9 6.5h11M9 12h11M9 17.5h11"/>
+        <path d="M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01"/>
+      </svg>
+    </a>
+  </nav>
+</div>
+
+<script src="data.js"></script>
+<script src="ui.js"></script>
+<script>
+(function () {
+  const rejilla = document.getElementById('rejilla');
+
+  rejilla.innerHTML = CAJAS.map(caja => {
+    const n = Datos.numObjetos(caja.num);
+    return `<article class="celda">
+      <a class="polaroid" href="caja.html?caja=${encodeURIComponent(caja.num)}"
+         aria-label="Caja ${UI.esc(caja.num)}, ${UI.esc(caja.nombre)}">
+        <span class="ilustracion-caja">${UI.cajaVisual()}</span>
+        <span class="etiqueta">CAJA ${UI.esc(caja.num)}</span>
+      </a>
+      <a class="celda__pie" href="caja.html?caja=${encodeURIComponent(caja.num)}" tabindex="-1">
+        <div class="celda__nombre">${UI.esc(caja.nombre)}</div>
+        <div class="celda__cuenta">${n} ${n === 1 ? 'objeto' : 'objetos'}</div>
+      </a>
+    </article>`;
+  }).join('');
+
+  /* Aviso efímero propio: esta página no carga styles.css */
+  let temporizador;
+  function aviso(texto) {
+    let el = document.querySelector('.aviso');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'aviso';
+      el.setAttribute('role', 'status');
+      document.body.appendChild(el);
+    }
+    el.textContent = texto;
+    requestAnimationFrame(() => el.classList.add('aviso--visible'));
+    clearTimeout(temporizador);
+    temporizador = setTimeout(() => el.classList.remove('aviso--visible'), 1600);
+  }
+
+  document.getElementById('nueva').addEventListener('click', function () {
+    aviso('Aquí se crearía una caja nueva');
+  });
+})();
+</script>
+</body>
+</html>

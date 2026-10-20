@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Cajas · lista o retícula</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../app/css/sistema.css">
+<style>
+body { overflow-x: hidden; }
+.pantalla { display: none; }
+body[data-p="1"] #p1, body[data-p="2"] #p2,
+body[data-p="3"] #p3, body[data-p="4"] #p4 { display: block; }
+
+/* Ya en la app (maqueta de sitios) ------------------------------------- */
+.seccion--sitio {
+  -webkit-appearance: none; appearance: none; width: 100%; border: 0; background: none;
+  font-family: inherit; text-align: left; display: flex; align-items: center;
+  justify-content: space-between; gap: 12px; margin: 22px 0 10px; padding: 6px 2px;
+}
+.sitios > .seccion--sitio:first-child { margin-top: 0; }
+.seccion__titulo { display: flex; align-items: center; gap: 3px; min-width: 0; }
+.seccion__galon { display: flex; flex: none; color: var(--gris-2); }
+.seccion__cuenta {
+  flex: none; color: var(--gris-2); font-size: 13.5px; font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== PIEZAS NUEVAS: el conmutador y los dos formatos que faltan ====== */
+
+/* El conmutador vive ARRIBA DEL TODO A LA DERECHA, no al lado de las
+   pestañas: así no les roba anchura y cae en el mismo sitio en todas las
+   pantallas (dentro de una caja ya hay botones justo ahí). La cabecera de la
+   home ya estaba hecha para esto — "título a la izquierda, sitio libre a la
+   derecha", dice el CSS.
+
+   Cambia el formato de la pestaña que estés viendo, no las dos a la vez: en
+   Cajas quieres ver fotos y en Inventario quieres leer nombres. */
+.conmutador {
+  flex: none;
+  -webkit-appearance: none; appearance: none;
+  width: 44px; height: 44px;
+  border: 1px solid var(--borde-campo);
+  border-radius: 15px;
+  background: var(--blanco);
+  color: var(--seccion);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: transform .3s var(--muelle-fuerte), color .15s ease;
+}
+.conmutador:active { transform: scale(.9); transition-duration: .08s; }
+/* Alineado con la línea del título, no con el bloque entero. */
+.cabecera--home .conmutador { margin-top: 2px; }
+.franja__fila { display: flex; align-items: center; gap: 10px; }
+.muestra {
+  background: var(--blanco); border: 1px solid var(--borde);
+  border-radius: 22px; padding: 14px 16px 16px;
+}
+.muestra .cabecera--home { padding-top: 0; }
+.franja__fila .pestanas { flex: 1 1 auto; min-width: 0; }
+
+/* --- Una caja como FILA: el mosaico se encoge, el nombre manda --------- */
+.mosaico--mini {
+  flex: none;
+  width: 52px; height: 52px;
+  border-radius: 15px;
+  grid-template-columns: 1fr 1fr;
+}
+.mosaico--mini i { font-size: 21px; }
+
+/* --- Un ítem como TARJETA: la foto grande, el nombre debajo ------------ */
+.rejilla {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 6px;
+}
+.pieza {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 24px;
+  padding: 7px 7px 16px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none;
+  transition: transform .34s var(--muelle);
+}
+.pieza:active { transform: scale(.977); transition-duration: .09s; }
+.pieza__cara {
+  aspect-ratio: 1;
+  border-radius: 17px;
+  background: var(--tesela);
+  border: 1px solid var(--borde-tesela);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 64px; line-height: 1;
+  overflow: hidden;
+}
+.pieza__nombre {
+  color: var(--tinta-2); font-size: 16px; font-weight: 600; line-height: 1.25;
+  margin: 12px 7px 0;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  /* Dos líneas reservadas SIEMPRE: si no, el nombre corto y el largo dejan
+     las metas a distinta altura y la retícula se ve desalineada. */
+  min-height: calc(2 * 1.25 * 16px);
+}
+.pieza__meta {
+  color: var(--gris); font-size: 13.5px; font-weight: 500; margin: 4px 7px 0;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.pieza__meta .chip-caja { padding: 3px 8px; font-size: 11px; }
+/* Dentro de una caja la tarjeta lleva su stepper: es lo que se viene a tocar. */
+.pieza__stepper { margin: 12px 7px 0; }
+.pieza__stepper .stepper { width: 100%; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<!-- ================================================= 1. CAJAS EN LISTA -->
+<div class="pantalla" id="p1">
+<main class="vista vista--home"><div>
+  <header class="cabecera cabecera--home">
+    <div><h1>Mi almacén</h1><div class="sub">199 ítems en 5 cajas</div></div>
+    <button type="button" class="conmutador" aria-label="Ver en retícula"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="2.2"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="2.2"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="2.2"/><rect x="13" y="13" width="7.5" height="7.5" rx="2.2"/></svg></button>
+  </header>
+
+  <div class="franja">
+    <nav class="pestanas" role="tablist" data-activa="0">
+      <span class="pestanas__pastilla" aria-hidden="true"></span>
+      <button type="button" class="pestanas__tab" role="tab" aria-selected="true">Cajas</button>
+      <button type="button" class="pestanas__tab" role="tab" aria-selected="false">Inventario</button>
+    </nav>
+  </div>
+
+  <section class="panel">
+    <button type="button" class="seccion seccion--sitio" aria-expanded="true">
+      <span class="seccion__titulo">Armario negro
+        <span class="seccion__galon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9.5 6 6 6-6"/></svg></span>
+      </span>
+      <span class="seccion__cuenta">5 cajas · 54 ítems</span>
+    </button>
+    <div class="lista">
+      <article class="fila pulsable">
+        <span class="mosaico mosaico--mini" aria-hidden="true"><i>🧴</i><i>🪥</i><i>🧼</i><i>💧</i></span>
+        <div class="texto"><div class="nombre">01</div><div class="tipo">14 ítems</div></div>
+      </article>
+      <article class="fila pulsable">
+        <span class="mosaico mosaico--mini" aria-hidden="true"><i>👕</i><i>🧺</i><i>🪮</i><i>💨</i></span>
+        <div class="texto"><div class="nombre">02</div><div class="tipo">5 ítems</div></div>
+      </article>
+      <article class="fila pulsable">
+        <span class="mosaico mosaico--mini" aria-hidden="true"><i>🪒</i><i>🧽</i><i>🪥</i><i>🧴</i></span>
+        <div class="texto"><div class="nombre">03</div><div class="tipo">8 ítems</div></div>
+      </article>
+      <article class="fila pulsable">
+        <span class="mosaico mosaico--mini" aria-hidden="true"><i>🧪</i><i>💊</i><i>🧴</i><i>🩹</i></span>
+        <div class="texto"><div class="nombre">04</div><div class="tipo">11 ítems</div></div>
+      </article>
+      <article class="fila pulsable">
+        <span class="mosaico mosaico--mini" aria-hidden="true"><i>🧼</i><i>🌿</i><i>🧴</i><i>🫧</i></span>
+        <div class="texto"><div class="nombre">05</div><div class="tipo">16 ítems</div></div>
+      </article>
+    </div>
+
+    <button type="button" class="seccion seccion--sitio" aria-expanded="true">
+      <span class="seccion__titulo">Sin sitio
+        <span class="seccion__galon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9.5 6 6 6-6"/></svg></span>
+      </span>
+      <span class="seccion__cuenta">0 ítems</span>
+    </button>
+    <div class="lista">
+      <article class="fila pulsable">
+        <span class="mosaico mosaico--mini" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <div class="texto"><div class="nombre">Sin clasificar</div><div class="tipo">0 ítems</div></div>
+      </article>
+    </div>
+
+    <button type="button" class="caja-nueva caja-nueva--fila" style="flex-direction:row;min-height:0;height:60px;border-radius:20px;margin-top:22px;">
+      <span aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 4.5v15M4.5 12h15"/></svg></span>
+      Nueva caja
+    </button>
+  </section>
+
+  <div class="velo-inferior" aria-hidden="true"></div>
+  <div class="flotante">
+    <label class="buscador buscador--flotante">
+      <span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20.2 20.2-3.6-3.6"/></svg></span>
+      <input type="search" placeholder="Dónde está..." aria-label="Buscar">
+    </label>
+    <button type="button" class="fab" aria-label="Añadir ítem">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 4.5v15M4.5 12h15"/></svg>
+    </button>
+  </div>
+</div></main>
+</div>
+
+<!-- ========================================== 2. INVENTARIO EN RETÍCULA -->
+<div class="pantalla" id="p2">
+<main class="vista vista--home"><div>
+  <header class="cabecera cabecera--home">
+    <div><h1>Mi almacén</h1><div class="sub">199 ítems en 5 cajas</div></div>
+    <button type="button" class="conmutador" aria-label="Ver en lista"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="6.5" rx="2.2"/><rect x="3.5" y="13.5" width="17" height="6.5" rx="2.2"/></svg></button>
+  </header>
+
+  <div class="franja">
+    <nav class="pestanas" role="tablist" data-activa="1">
+      <span class="pestanas__pastilla" aria-hidden="true"></span>
+      <button type="button" class="pestanas__tab" role="tab" aria-selected="false">Cajas</button>
+      <button type="button" class="pestanas__tab" role="tab" aria-selected="true">Inventario</button>
+    </nav>
+  </div>
+
+  <section class="panel">
+    <div class="rejilla">
+      <article class="pieza">
+        <div class="pieza__cara" aria-hidden="true">🧴</div>
+        <div class="pieza__nombre">Limpia PAX</div>
+        <div class="pieza__meta">46 uds <button type="button" class="chip-caja">03</button></div>
+      </article>
+      <article class="pieza">
+        <div class="pieza__cara" aria-hidden="true">🪥</div>
+        <div class="pieza__nombre">Cepillo de dientes deshechable</div>
+        <div class="pieza__meta">26 uds <button type="button" class="chip-caja">01</button><button type="button" class="chip-caja">03</button></div>
+      </article>
+      <article class="pieza">
+        <div class="pieza__cara" aria-hidden="true">🧪</div>
+        <div class="pieza__nombre">Enjuague bucal mini VITIS</div>
+        <div class="pieza__meta">20 uds <button type="button" class="chip-caja">04</button></div>
+      </article>
+      <article class="pieza">
+        <div class="pieza__cara" aria-hidden="true">🧻</div>
+        <div class="pieza__nombre">Toallitas mini</div>
+        <div class="pieza__meta">17 uds <button type="button" class="chip-caja">01</button></div>
+      </article>
+      <article class="pieza">
+        <div class="pieza__cara" aria-hidden="true">🦷</div>
+        <div class="pieza__nombre">Pasta de dientes mini VITIS</div>
+        <div class="pieza__meta">13 uds <button type="button" class="chip-caja">04</button></div>
+      </article>
+      <article class="pieza">
+        <div class="pieza__cara" aria-hidden="true">🌸</div>
+        <div class="pieza__nombre">Colonia Nil</div>
+        <div class="pieza__meta">7 uds <button type="button" class="chip-caja">01</button></div>
+      </article>
+    </div>
+  </section>
+
+  <div class="velo-inferior" aria-hidden="true"></div>
+  <div class="flotante">
+    <label class="buscador buscador--flotante">
+      <span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20.2 20.2-3.6-3.6"/></svg></span>
+      <input type="search" placeholder="Dónde está..." aria-label="Buscar">
+    </label>
+    <button type="button" class="fab" aria-label="Añadir ítem">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 4.5v15M4.5 12h15"/></svg>
+    </button>
+  </div>
+</div></main>
+</div>
+
+<!-- ================================= 3. DENTRO DE UNA CAJA, EN RETÍCULA -->
+<div class="pantalla" id="p3">
+<main class="vista vista--caja"><div>
+  <nav class="barra">
+    <button type="button" class="icono-btn" aria-label="Volver"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg></button>
+    <div class="barra__grupo">
+      <button type="button" class="icono-btn" aria-label="Ver en lista">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="6.5" rx="2.2"/><rect x="3.5" y="13.5" width="17" height="6.5" rx="2.2"/></svg>
+      </button>
+      <button type="button" class="icono-btn" aria-label="Ajustes"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.0 1.8 L14.0 2.0 L14.8 5.2 L16.1 5.8 L19.2 4.8 L20.5 6.3 L18.8 9.2 L19.3 10.6 L22.2 12.0 L22.0 14.0 L18.8 14.8 L18.2 16.1 L19.2 19.2 L17.7 20.5 L14.8 18.8 L13.4 19.3 L12.0 22.2 L10.0 22.0 L9.2 18.8 L7.9 18.2 L4.8 19.2 L3.5 17.7 L5.2 14.8 L4.7 13.4 L1.8 12.0 L2.0 10.0 L5.2 9.2 L5.8 7.9 L4.8 4.8 L6.3 3.5 L9.2 5.2 L10.6 4.7 Z"/><circle cx="12" cy="12" r="3.3"/></svg></button>
+    </div>
+  </nav>
+
+  <header class="cabecera cabecera--identidad">
+    <span class="num-tesela" aria-hidden="true">01</span>
+    <div><h1>Baño</h1><div class="sub">Armario negro · 14 ítems</div></div>
+  </header>
+
+  <div class="seccion seccion--primera">Qué hay dentro</div>
+  <div class="rejilla">
+    <article class="pieza">
+      <div class="pieza__cara" aria-hidden="true">🦷</div>
+      <div class="pieza__nombre">Pasta de dientes VITIS</div>
+      <div class="pieza__stepper">
+        <div class="stepper">
+          <button type="button" aria-label="Quitar uno"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4.5 12h15"/></svg></button>
+          <span class="cifra">2</span>
+          <button type="button" aria-label="Añadir uno"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 4.5v15M4.5 12h15"/></svg></button>
+        </div>
+      </div>
+    </article>
+    <article class="pieza">
+      <div class="pieza__cara" aria-hidden="true">🧪</div>
+      <div class="pieza__nombre">Enjuague bucal VITIS</div>
+      <div class="pieza__stepper">
+        <div class="stepper">
+          <button type="button" aria-label="Quitar uno"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4.5 12h15"/></svg></button>
+          <span class="cifra">4</span>
+          <button type="button" aria-label="Añadir uno"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 4.5v15M4.5 12h15"/></svg></button>
+        </div>
+      </div>
+    </article>
+    <article class="pieza">
+      <div class="pieza__cara" aria-hidden="true">💨</div>
+      <div class="pieza__nombre">Desodorante</div>
+      <div class="pieza__stepper">
+        <div class="stepper">
+          <button type="button" aria-label="Quitar uno"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4.5 12h15"/></svg></button>
+          <span class="cifra">3</span>
+          <button type="button" aria-label="Añadir uno"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 4.5v15M4.5 12h15"/></svg></button>
+        </div>
+      </div>
+    </article>
+    <article class="pieza">
+      <div class="pieza__cara" aria-hidden="true">🌸</div>
+      <div class="pieza__nombre">Colonia Nil</div>
+      <div class="pieza__stepper">
+        <div class="stepper">
+          <button type="button" aria-label="Quitar uno"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4.5 12h15"/></svg></button>
+          <span class="cifra">7</span>
+          <button type="button" aria-label="Añadir uno"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 4.5v15M4.5 12h15"/></svg></button>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <div class="velo-inferior" aria-hidden="true"></div>
+  <div class="flotante">
+    <button type="button" class="cta">
+      <span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 4.5v15M4.5 12h15"/></svg></span>
+      Añadir ítem
+    </button>
+  </div>
+</div></main>
+</div>
+
+<!-- ==================================== 4. EL CONTROL: DOS CANDIDATOS -->
+<div class="pantalla" id="p4">
+<main class="vista"><div>
+  <header class="cabecera"><h1>Dónde va el botón</h1><div class="sub">Arriba a la derecha (tu idea) o pegado a las pestañas.</div></header>
+
+  <div class="seccion seccion--primera">Arriba del todo, a la derecha</div>
+  <div class="muestra">
+    <div class="cabecera cabecera--home" style="padding-bottom:14px;">
+      <div><h1 style="font-size:25px;font-weight:700;">Mi almacén</h1><div class="sub">199 ítems en 5 cajas</div></div>
+      <button type="button" class="conmutador" aria-label="Ver en retícula"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="2.2"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="2.2"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="2.2"/><rect x="13" y="13" width="7.5" height="7.5" rx="2.2"/></svg></button>
+    </div>
+    <nav class="pestanas" data-activa="0">
+      <span class="pestanas__pastilla" aria-hidden="true"></span>
+      <button type="button" class="pestanas__tab" aria-selected="true">Cajas</button>
+      <button type="button" class="pestanas__tab" aria-selected="false">Inventario</button>
+    </nav>
+  </div>
+  <div class="pista">Las pestañas se quedan enteras, y es el mismo sitio que ocupan el engranaje y la papelera en las pantallas de dentro. Se va con el scroll: para algo que se toca una vez, mejor que estorbe menos.</div>
+
+  <div class="seccion">Al lado de las pestañas</div>
+  <div class="muestra">
+    <div class="cabecera cabecera--home" style="padding-bottom:14px;">
+      <div><h1 style="font-size:25px;font-weight:700;">Mi almacén</h1><div class="sub">199 ítems en 5 cajas</div></div>
+    </div>
+    <div class="franja__fila">
+      <nav class="pestanas" data-activa="0">
+        <span class="pestanas__pastilla" aria-hidden="true"></span>
+        <button type="button" class="pestanas__tab" aria-selected="true">Cajas</button>
+        <button type="button" class="pestanas__tab" aria-selected="false">Inventario</button>
+      </nav>
+      <button type="button" class="conmutador" aria-label="Ver en retícula"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="2.2"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="2.2"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="2.2"/><rect x="13" y="13" width="7.5" height="7.5" rx="2.2"/></svg></button>
+    </div>
+  </div>
+  <div class="pista">Siempre a mano porque la franja se queda pegada arriba, pero les come 58px a las pestañas y deja la cabecera vacía al lado del título.</div>
+
+  <div class="seccion">El icono</div>
+  <div class="pista" style="margin-bottom:12px;">Enseña el formato AL QUE VAS, no en el que estás: es un botón, y un botón dice lo que hace.</div>
+  <div class="lista">
+    <article class="fila">
+      <span class="mini" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="2.2"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="2.2"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="2.2"/><rect x="13" y="13" width="7.5" height="7.5" rx="2.2"/></svg></span>
+      <div class="texto"><div class="nombre">Estás en lista</div><div class="tipo">Tócalo y pasas a retícula</div></div>
+    </article>
+    <article class="fila">
+      <span class="mini" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="6.5" rx="2.2"/><rect x="3.5" y="13.5" width="17" height="6.5" rx="2.2"/></svg></span>
+      <div class="texto"><div class="nombre">Estás en retícula</div><div class="tipo">Tócalo y pasas a lista</div></div>
+    </article>
+  </div>
+</div></main>
+</div>
+
+<script>
+  const fija = () => { document.body.dataset.p = location.hash.replace('#', '') || '1'; };
+  fija();
+  addEventListener('hashchange', fija);
+</script>
+</body>
+</html>

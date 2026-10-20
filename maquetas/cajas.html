@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>cajas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="ui.js"></script>
+</head>
+<body data-seccion="cajas" data-pie="pildora">
+
+<header class="cabecera cabecera--centrada">
+  <h1 class="wordmark">cajas</h1>
+  <button type="button" class="cabecera__accion" id="nueva" aria-label="Nueva caja"></button>
+</header>
+
+<main class="reticula" id="reticula"></main>
+
+<div class="barra-inferior">
+  <a class="pildora" href="inventario.html?buscar=1">
+    <span class="destello" id="destello" aria-hidden="true"></span>
+    <span class="texto">¿Dónde está…?</span>
+  </a>
+</div>
+
+<dialog class="modal" id="dialogo-nueva" aria-labelledby="titulo-nueva">
+  <div class="modal__cabecera">
+    <h2 id="titulo-nueva">Nueva caja</h2>
+    <button type="button" class="cerrar" id="cerrar-nueva" aria-label="Cerrar">✕</button>
+  </div>
+  <div class="modal__cuerpo">
+    <p class="secundario" style="font-size:14px;">
+      Se le asignará la etiqueta <b id="siguiente-etiqueta" class="etiqueta"></b> y su QR.
+    </p>
+    <label class="campo-form">
+      <span>Nombre</span>
+      <input type="text" id="caja-nombre" placeholder="Baño repuestos" autocomplete="off">
+    </label>
+    <label class="campo-form">
+      <span>Ubicación</span>
+      <input type="text" id="caja-ubicacion" placeholder="Estantería fondo" autocomplete="off">
+    </label>
+  </div>
+  <div class="modal__pie">
+    <button type="button" class="btn btn--llano btn--peq" id="cancelar-nueva">Cancelar</button>
+    <button type="button" class="btn btn--primario btn--peq" id="confirmar-nueva">Crear caja</button>
+  </div>
+</dialog>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  const reticula = document.getElementById('reticula');
+  const dialogo = document.getElementById('dialogo-nueva');
+  const nombre = document.getElementById('caja-nombre');
+  const ubicacion = document.getElementById('caja-ubicacion');
+
+  document.getElementById('nueva').innerHTML = UI.icono('anadir', 26);
+  document.getElementById('destello').innerHTML = UI.icono('destello', 22);
+
+  function celdaHTML(caja) {
+    const n = Datos.numObjetos(caja.num);
+    return `<article class="celda" data-num="${UI.esc(caja.num)}">
+      <a class="celda__enlace" href="caja.html?caja=${encodeURIComponent(caja.num)}">
+        ${UI.pila(caja.num)}
+        <h2>${UI.esc(caja.nombre)}</h2>
+        <span class="meta">${UI.plural(n, 'objeto', 'objetos')}</span>
+      </a>
+    </article>`;
+  }
+
+  function pintar(destacar) {
+    /* Huecos al final para que la última fila no se separe con space-between */
+    const huecos = (3 - (CAJAS.length % 3)) % 3;
+    reticula.innerHTML = CAJAS.map(celdaHTML).join('') +
+      '<i class="celda celda--hueco" aria-hidden="true"></i>'.repeat(huecos);
+    if (destacar) {
+      const el = reticula.querySelector(`[data-num="${destacar}"]`);
+      if (el) el.classList.add('fila--pulso');
+    }
+  }
+
+  document.getElementById('nueva').addEventListener('click', function () {
+    const siguiente = String(CAJAS.reduce((m, c) => Math.max(m, parseInt(c.num, 10) || 0), 0) + 1).padStart(2, '0');
+    document.getElementById('siguiente-etiqueta').textContent = 'CAJA ' + siguiente;
+    nombre.value = '';
+    ubicacion.value = '';
+    dialogo.showModal();
+    nombre.focus();
+  });
+
+  document.getElementById('cerrar-nueva').addEventListener('click', () => dialogo.close());
+  document.getElementById('cancelar-nueva').addEventListener('click', () => dialogo.close());
+
+  document.getElementById('confirmar-nueva').addEventListener('click', function () {
+    const n = nombre.value.trim();
+    if (!n) { nombre.focus(); return; }
+    const caja = Datos.crearCaja(n, ubicacion.value.trim() || 'Sin ubicación');
+    dialogo.close();
+    pintar(caja.num);
+    UI.toast('CAJA ' + caja.num + ' creada');
+  });
+
+  pintar();
+})();
+</script>
+</body>
+</html>

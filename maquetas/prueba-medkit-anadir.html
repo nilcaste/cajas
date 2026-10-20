@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prueba Añadir · med kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --fondo:   #FAFAFA;
+    --blanco:  #FFFFFF;
+    --tinta:   #17181A;
+    --carbon:  #232936;
+    --gris:    #8E8E93;
+    --borde:   #EDEDED;
+    --campo:   #F0F0F1;
+    --fuente: "Google Sans Flex", system-ui, -apple-system, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; }
+
+  /* La CTA de la caja se encoge hasta el ✓ de confirmar */
+  @view-transition { navigation: auto; }
+  ::view-transition-group(boton-anadir) {
+    animation-duration: .42s;
+    animation-timing-function: cubic-bezier(.32, 1.26, .4, 1);
+  }
+  ::view-transition-image-pair(boton-anadir) {
+    border-radius: 22px;
+    overflow: clip;
+    background: #232936;
+    isolation: auto;
+  }
+  ::view-transition-old(boton-anadir),
+  ::view-transition-new(boton-anadir) {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    mix-blend-mode: normal;
+  }
+  ::view-transition-old(boton-anadir) { animation: vt-fuera .1s ease both; }
+  ::view-transition-new(boton-anadir) { animation: vt-dentro .2s ease .15s both; }
+  @keyframes vt-fuera { to { opacity: 0; } }
+  @keyframes vt-dentro { from { opacity: 0; } to { opacity: 1; } }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; }
+  @media (prefers-reduced-motion: reduce) {
+    @view-transition { navigation: none; }
+  }
+
+  body {
+    background: var(--fondo);
+    color: var(--tinta);
+    font-family: var(--fuente);
+    -webkit-font-smoothing: antialiased;
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding: 24px 20px 140px;
+  }
+
+  .barra {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px 0 16px;
+  }
+  .icono-btn {
+    color: var(--tinta);
+    display: flex;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .3s cubic-bezier(.22, .9, .28, 1.2), opacity .12s ease;
+    text-decoration: none;
+  }
+  .icono-btn:active { transform: scale(.85); opacity: .6; transition-duration: .08s; }
+
+  .cabecera { padding: 2px 2px 16px; }
+  .cabecera h1 { font-size: 25px; font-weight: 700; }
+  .cabecera .sub {
+    color: var(--gris);
+    font-size: 14.5px;
+    font-weight: 500;
+    margin-top: 2px;
+  }
+  .cabecera .sub .num { font-family: var(--mono); font-size: 13px; }
+
+  /* Buscador del sistema, en flujo */
+  .buscador {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--campo);
+    border: 1px solid #E5E5E6;
+    border-radius: 18px;
+    height: 52px;
+    padding: 0 16px;
+    color: #8E9095;
+    cursor: text;
+    transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
+  }
+  .buscador span { display: flex; transition: color .16s ease; }
+  .buscador input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    outline: none;
+    font-family: inherit;
+    font-size: 16.5px;
+    color: var(--tinta);
+    caret-color: var(--carbon);
+  }
+  .buscador input::placeholder { color: #8E9095; }
+  .buscador:focus-within {
+    background: var(--blanco);
+    border-color: #D2D2D5;
+    box-shadow: 0 2px 10px rgba(23, 24, 26, .06);
+  }
+  .buscador:focus-within span { color: #55565A; }
+
+  /* Elegir caja no es un campo cualquiera: es la decisión de la pantalla */
+  .selector-caja {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--blanco);
+    border: 1.5px solid var(--carbon);
+    border-radius: 18px;
+    height: 54px;
+    padding: 0 16px;
+    margin-bottom: 12px;
+    cursor: pointer;
+  }
+  .selector-caja__prefijo {
+    flex: none;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gris);
+  }
+  .selector-caja select {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1 1 auto;
+    border: 0;
+    background: transparent;
+    outline: none;
+    font-family: var(--mono);
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--tinta);
+    cursor: pointer;
+  }
+  .selector-caja .flecha { flex: none; color: #C9C9CC; display: flex; pointer-events: none; }
+  .oculto { display: none !important; }
+
+  .seccion {
+    color: #6E6E73;
+    font-size: 15px;
+    font-weight: 600;
+    margin: 20px 2px 10px;
+  }
+
+  /* Recientes: chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    -webkit-appearance: none;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--blanco);
+    border: 1px solid var(--borde);
+    border-radius: 999px;
+    padding: 9px 14px 9px 10px;
+    font-family: inherit;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: #1B1B1D;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .3s cubic-bezier(.22, .9, .28, 1.2), background-color .15s ease;
+  }
+  .chip:active { transform: scale(.94); transition-duration: .08s; }
+  .chip .emoji { font-size: 18px; }
+
+  /* Catálogo: filas del sistema */
+  .filas { display: flex; flex-direction: column; gap: 10px; }
+  .fila {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--blanco);
+    border: 1px solid var(--borde);
+    border-radius: 20px;
+    padding: 10px 10px 10px 12px;
+  }
+  .fila .tesela {
+    flex: none;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: #FAFAFB;
+    border: 1px solid #E6E6E7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    user-select: none;
+  }
+  .fila .texto { flex: 1 1 auto; min-width: 0; }
+  .fila .nombre {
+    color: #1B1B1D;
+    font-size: 16px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .fila .tipo { color: var(--gris); font-size: 13.5px; font-weight: 500; margin-top: 1px; }
+  .fila .nombre b { font-weight: 700; }
+
+  .btn-cuadrado {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid #E5E5E6;
+    background: var(--campo);
+    color: var(--tinta);
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .3s cubic-bezier(.22, .9, .28, 1.2), background-color .15s ease;
+  }
+  .btn-cuadrado:active { transform: scale(.88); background: #E8E8E9; transition-duration: .08s; }
+
+  .stepper { flex: none; display: flex; align-items: center; gap: 3px; }
+  .stepper .cifra {
+    min-width: 24px;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .cifra--pop { animation: pop .28s cubic-bezier(.22, .9, .28, 1.4); }
+  @keyframes pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.25); }
+    100% { transform: scale(1); }
+  }
+
+  /* Crear nuevo (aparece al buscar sin resultado) */
+  .crear {
+    width: 100%;
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    text-align: left;
+    gap: 14px;
+    background: transparent;
+    border: 1.5px dashed #D6D6D8;
+    border-radius: 20px;
+    padding: 10px 10px 10px 12px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .3s cubic-bezier(.22, .9, .28, 1.2);
+  }
+  .crear:active { transform: scale(.985); transition-duration: .08s; }
+  .crear .tesela {
+    flex: none;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: var(--campo);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--tinta);
+  }
+  .crear .nombre { font-size: 16px; font-weight: 600; color: #1B1B1D; }
+  .crear .tipo { color: var(--gris); font-size: 13.5px; font-weight: 500; margin-top: 1px; }
+
+  .oculto { display: none !important; }
+
+  /* ---------- Flotante: estado + confirmar ---------- */
+  .velo-inferior {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: 150px;
+    background: linear-gradient(to top, #FAFAFA 38%, rgba(250, 250, 250, .85) 62%, rgba(250, 250, 250, 0));
+    pointer-events: none;
+    z-index: 5;
+  }
+  .flotante {
+    position: fixed;
+    left: max(20px, calc(50vw - 195px));
+    right: max(20px, calc(50vw - 195px));
+    bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 10;
+  }
+  .fab-ok {
+    flex: none;
+    position: relative;
+    view-transition-name: boton-anadir;
+    width: 56px;
+    height: 56px;
+    border-radius: 22px;
+    background: var(--carbon);
+    color: #fff;
+    border: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 16px rgba(23, 24, 26, .16);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .34s cubic-bezier(.22, .9, .28, 1.2), box-shadow .2s ease;
+  }
+  .fab-ok:active {
+    transform: scale(.9);
+    box-shadow: 0 3px 8px rgba(23, 24, 26, .18);
+    transition-duration: .09s;
+  }
+  .fab-ok .globo {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--blanco);
+    color: var(--tinta);
+    border: 1px solid var(--borde);
+    box-shadow: 0 2px 6px rgba(23, 24, 26, .12);
+    font-size: 12.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .fab-ok .globo.oculto { display: none; }
+  .globo--pop { animation: pop .28s cubic-bezier(.22, .9, .28, 1.4); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .icono-btn, .chip, .fila, .btn-cuadrado, .crear, .fab-ok, .buscador { transition: none; }
+    .cifra--pop { animation: none; }
+  }
+  /* ==========================================================
+     Escritorio: esto es un paso de proceso, no una pantalla.
+     Se presenta como modal sobre la pantalla anterior atenuada.
+     ========================================================== */
+  @media (min-width: 900px) {
+    html { background: var(--fondo); }
+    html::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: rgba(23, 24, 26, .20);
+      z-index: 0;
+    }
+    body {
+      position: relative;
+      z-index: 1;
+      max-width: 520px;
+      min-height: 0;
+      margin: 56px auto;
+      padding: 24px 26px 26px;
+      background: var(--blanco);
+      border: 1px solid var(--borde);
+      border-radius: 24px;
+      box-shadow: 0 24px 60px rgba(23, 24, 26, .18);
+    }
+    /* La CTA deja de flotar: vive dentro de la tarjeta */
+    .velo-inferior { display: none; }
+    .flotante {
+      position: static;
+      left: auto;
+      right: auto;
+      bottom: auto;
+      margin-top: 26px;
+    }
+    dialog.hoja { margin: auto; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="barra">
+  <a class="icono-btn" href="prueba-medkit-caja.html" aria-label="Cerrar sin terminar">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+  </a>
+</nav>
+
+<header class="cabecera">
+  <h1>Añadir ítem</h1>
+  <div class="sub" id="sub-fija">a <span class="num">CAJA 01</span> · Baño repuestos</div>
+</header>
+
+<label class="selector-caja oculto" id="selector-caja">
+  <span class="selector-caja__prefijo">Va a:</span>
+  <select id="caja-destino" aria-label="Caja de destino">
+    <option>CAJA 01 · Baño repuestos</option>
+    <option>CAJA 02 · Limpieza</option>
+    <option>CAJA 03 · Cocina repuestos</option>
+    <option>CAJA 04 · Electricidad</option>
+    <option>CAJA 05 · Herramientas</option>
+    <option>CAJA 06 · Deporte</option>
+    <option>CAJA 07 · Repuestos varios</option>
+    <option>CAJA 08 · Textil e invierno</option>
+  </select>
+  <span class="flecha" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9.5 6 6 6-6"/></svg>
+  </span>
+</label>
+
+<label class="buscador">
+  <span aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20.2 20.2-3.6-3.6"/></svg>
+  </span>
+  <input type="search" id="q" placeholder="Buscar en el catálogo..." aria-label="Buscar en el catálogo" autocomplete="off" autocorrect="off" spellcheck="false" autofocus>
+</label>
+
+<main class="filas" id="filas" style="margin-top: 18px;"></main>
+
+<button type="button" class="crear oculto" id="crear">
+  <span class="tesela" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 4.5v15M4.5 12h15"/></svg>
+  </span>
+  <span>
+    <span class="nombre" id="crear-nombre">Crear «»</span>
+    <span class="tipo" style="display:block;">Alta nueva en el catálogo</span>
+  </span>
+</button>
+
+<script>
+(function () {
+  const CATALOGO = [
+    { id: 'estropajos', emoji: '🧽', nombre: 'Estropajos', tipo: 'Suministro' },
+    { id: 'pilas', emoji: '🔋', nombre: 'Pilas AA', tipo: 'Suministro' },
+    { id: 'papel', emoji: '🧻', nombre: 'Papel de cocina', tipo: 'Suministro' },
+    { id: 'bombillas', emoji: '💡', nombre: 'Bombillas LED', tipo: 'Suministro' },
+    { id: 'gel', emoji: '🧴', nombre: 'Gel de ducha', tipo: 'Suministro' },
+    { id: 'velas', emoji: '🕯️', nombre: 'Velas', tipo: 'Suministro' },
+    { id: 'plancha', emoji: '👕', nombre: 'Plancha', tipo: 'Único' },
+    { id: 'taladro', emoji: '🔨', nombre: 'Taladro', tipo: 'Único' },
+  ];
+  const filas = document.getElementById('filas');
+  const q = document.getElementById('q');
+  const crear = document.getElementById('crear');
+  const crearNombre = document.getElementById('crear-nombre');
+
+  const iconoMas = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 4.5v15M4.5 12h15"/></svg>';
+  const iconoOk = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5 10 18 19.5 7"/></svg>';
+
+  function esc(t) {
+    return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  /* La subcadena que coincide va en negrita */
+  function resaltar(nombre, filtro) {
+    if (!filtro) return esc(nombre);
+    const i = nombre.toLowerCase().indexOf(filtro);
+    if (i < 0) return esc(nombre);
+    return esc(nombre.slice(0, i)) + '<b>' + esc(nombre.slice(i, i + filtro.length)) +
+      '</b>' + esc(nombre.slice(i + filtro.length));
+  }
+
+  function pintar() {
+    const texto = q.value.trim().toLowerCase();
+    /* Vacío = solo el buscador. Al escribir, van saliendo las opciones. */
+    const lista = texto ? CATALOGO.filter(o => o.nombre.toLowerCase().includes(texto)) : [];
+    filas.innerHTML = lista.map(o => `
+      <article class="fila" data-fila="${o.id}" role="button" tabindex="0" style="cursor: pointer;">
+        <span class="tesela" aria-hidden="true">${o.emoji}</span>
+        <div class="texto">
+          <div class="nombre">${resaltar(o.nombre, texto)}</div>
+          <div class="tipo">${o.tipo}</div>
+        </div>
+        <span class="btn-cuadrado" aria-hidden="true">${iconoMas}</span>
+      </article>`).join('');
+    /* «Crear» sale siempre que hay texto sin coincidencia exacta */
+    const exacto = lista.some(o => o.nombre.toLowerCase() === texto);
+    if (texto && !exacto) {
+      crear.classList.remove('oculto');
+      crearNombre.textContent = 'Crear «' + q.value.trim() + '»';
+    } else {
+      crear.classList.add('oculto');
+    }
+  }
+
+  /* Un ítem por viaje: tocas, se añade uno y vuelves a la caja */
+  let saliendo = false;
+  document.addEventListener('click', e => {
+    const fila = e.target.closest('.fila');
+    if (!fila || saliendo) return;
+    saliendo = true;
+    /* La caja lo recogerá al cargar para colar la fila arriba con su flash */
+    const datos = CATALOGO.find(o => o.id === fila.dataset.fila);
+    if (datos) {
+      try {
+        localStorage.setItem('cajas.recien',
+          JSON.stringify({ emoji: datos.emoji, nombre: datos.nombre, tipo: datos.tipo }));
+      } catch (e) { /* sin almacenamiento: se pierde la marca, nada más */ }
+    }
+    const btn = fila.querySelector('.btn-cuadrado');
+    btn.style.background = '#232936';
+    btn.style.borderColor = '#232936';
+    btn.style.color = '#fff';
+    btn.innerHTML = iconoOk;
+    setTimeout(() => { location.href = 'prueba-medkit-caja.html'; }, 260);
+  });
+
+  q.addEventListener('input', pintar);
+  crear.addEventListener('click', () => {
+    location.href = 'prueba-medkit-crear.html?nombre=' + encodeURIComponent(q.value.trim());
+  });
+
+  pintar();
+
+  /* Desde la Home: hay que elegir la caja de destino */
+  if (new URLSearchParams(location.search).get('desde') === 'home') {
+    document.getElementById('sub-fija').classList.add('oculto');
+    document.getElementById('selector-caja').classList.remove('oculto');
+  }
+
+  /* "/" devuelve el foco al buscador si andabas por la página */
+  document.addEventListener('keydown', e => {
+    if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+    const a = document.activeElement;
+    if (a && /^(input|textarea|select)$/i.test(a.tagName)) return;
+    e.preventDefault();
+    q.focus();
+  });
+
+  /* Foco al entrar: en la app real (SPA) esto abre el teclado siempre;
+     como maqueta multipágina, iOS puede retener el teclado hasta el primer toque. */
+  requestAnimationFrame(() => q.focus({ preventScroll: true }));
+})();
+</script>
+
+</body>
+</html>

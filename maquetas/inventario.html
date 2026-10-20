@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Inventario</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="ui.js"></script>
+</head>
+<body data-seccion="inventario">
+
+<div class="principal__cabecera">
+  <div>
+    <h1>Inventario</h1>
+    <p id="resumen-catalogo"></p>
+  </div>
+  <button type="button" class="btn btn--primario btn--peq" id="abrir-compra">Añadir compra</button>
+</div>
+
+<div class="barra-busqueda">
+  <div class="campo campo--grande">
+    <span class="destello" id="icono-buscar" aria-hidden="true"></span>
+    <input type="search" id="q" placeholder="¿Dónde está…?" autocomplete="off"
+           autocorrect="off" spellcheck="false" aria-label="Buscar un objeto en todas las cajas">
+    <button type="button" class="limpiar oculto" id="limpiar" aria-label="Limpiar búsqueda">✕</button>
+  </div>
+</div>
+
+<div class="tarjetas-inventario" id="tarjetas"></div>
+
+<div class="vacio oculto" id="sin-resultados">
+  <span class="vacio__emoji">🔎</span>
+  <strong>Nada con ese nombre</strong>
+  Puede que aún no lo hayáis dado de alta.
+</div>
+
+<dialog class="modal" id="dialogo-compra" aria-labelledby="titulo-compra">
+  <div class="modal__cabecera">
+    <h2 id="titulo-compra">Añadir compra</h2>
+    <button type="button" class="cerrar" id="cerrar-compra" aria-label="Cerrar">✕</button>
+  </div>
+
+  <div class="modal__cuerpo">
+    <div class="campo-form autocompletar" id="campo-objeto">
+      <span>Objeto</span>
+      <input type="text" id="ac-input" placeholder="Empieza a escribir…" autocomplete="off"
+             role="combobox" aria-expanded="false" aria-controls="ac-lista">
+      <ul class="sugerencias oculto" id="ac-lista"></ul>
+    </div>
+
+    <div class="objeto-fijo oculto" id="objeto-fijo">
+      <span class="foto foto--s" aria-hidden="true" id="fijo-emoji"></span>
+      <span>
+        <b id="fijo-nombre"></b><br>
+        <small id="fijo-tipo"></small>
+      </span>
+    </div>
+
+    <div class="fila-form" style="margin-top:14px;">
+      <div class="campo-form" style="margin-top:0;">
+        <span>Cantidad</span>
+        <div class="stepper">
+          <button type="button" id="cant-menos" aria-label="Menos cantidad"></button>
+          <output id="cant">1</output>
+          <button type="button" id="cant-mas" aria-label="Más cantidad"></button>
+        </div>
+      </div>
+
+      <label class="campo-form" style="margin-top:0;">
+        <span>Caja</span>
+        <select id="select-caja"></select>
+      </label>
+    </div>
+
+    <p class="secundario" style="font-size:13px;margin-top:14px;">
+      Se añade a esa caja. Si hace falta repartirlo, se hace en dos compras.
+    </p>
+  </div>
+
+  <div class="modal__pie">
+    <button type="button" class="btn btn--llano btn--peq" id="cancelar-compra">Cancelar</button>
+    <button type="button" class="btn btn--primario btn--peq" id="confirmar-compra" disabled>Añadir a la caja</button>
+  </div>
+</dialog>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  const tarjetas = document.getElementById('tarjetas');
+  const q = document.getElementById('q');
+  const limpiar = document.getElementById('limpiar');
+  const sinResultados = document.getElementById('sin-resultados');
+  const dialogo = document.getElementById('dialogo-compra');
+  const campoObjeto = document.getElementById('campo-objeto');
+  const objetoFijo = document.getElementById('objeto-fijo');
+  const acInput = document.getElementById('ac-input');
+  const acLista = document.getElementById('ac-lista');
+  const cant = document.getElementById('cant');
+  const cantMenos = document.getElementById('cant-menos');
+  const cantMas = document.getElementById('cant-mas');
+  const selectCaja = document.getElementById('select-caja');
+  const confirmar = document.getElementById('confirmar-compra');
+
+  document.getElementById('icono-buscar').innerHTML = UI.icono('destello', 22);
+  cantMenos.innerHTML = UI.icono('quitar', 18);
+  cantMas.innerHTML = UI.icono('anadir', 18);
+
+  let seleccionado = null;
+
+  /* ---------- Pintado ---------- */
+
+  function chips(objeto) {
+    const ubicaciones = Datos.ubicaciones(objeto.id);
+    return ubicaciones.length
+      ? ubicaciones.map(u => UI.chipCaja(u.caja.num, objeto.suministro ? u.cantidad : null)).join('')
+      : '<span class="secundario">En ninguna caja</span>';
+  }
+
+  function tarjetaHTML(objeto) {
+    const total = Datos.total(objeto.id);
+    return `<article class="tarjeta-obj" data-id="${UI.esc(objeto.id)}">
+      <span class="foto" aria-hidden="true">${objeto.emoji}</span>
+      <div class="tarjeta-obj__texto">
+        <div class="tarjeta-obj__nombre">${UI.esc(objeto.nombre)}</div>
+        <div class="tarjeta-obj__meta">
+          <span class="tarjeta-obj__total">${total}</span>
+          <span>${objeto.suministro ? 'unidades · Suministro' : 'Único'}</span>
+        </div>
+      </div>
+      <button type="button" class="btn-mas" data-comprar="${UI.esc(objeto.id)}"
+              aria-label="Añadir una compra de ${UI.esc(objeto.nombre)}">${UI.icono('anadir', 20)}</button>
+      <div class="tarjeta-obj__cajas">${chips(objeto)}</div>
+    </article>`;
+  }
+
+  function pintar(destacar) {
+    const texto = q.value.trim();
+    limpiar.classList.toggle('oculto', !texto);
+    const lista = texto ? Datos.buscar(texto) : CATALOGO.slice();
+
+    tarjetas.innerHTML = lista.map(tarjetaHTML).join('');
+    sinResultados.classList.toggle('oculto', lista.length > 0);
+
+    const unidades = CATALOGO.reduce((n, o) => n + Datos.total(o.id), 0);
+    document.getElementById('resumen-catalogo').textContent =
+      `${CATALOGO.length} objetos · ${unidades} unidades en ${CAJAS.length} cajas`;
+
+    if (destacar) {
+      const el = tarjetas.querySelector(`[data-id="${destacar}"]`);
+      if (el) el.classList.add('fila-destacada');
+    }
+  }
+
+  q.addEventListener('input', () => pintar());
+  limpiar.addEventListener('click', () => { q.value = ''; pintar(); q.focus(); });
+
+  /* ---------- Diálogo de compra ---------- */
+
+  selectCaja.innerHTML = CAJAS.map(c =>
+    `<option value="${UI.esc(c.num)}">CAJA ${UI.esc(c.num)} — ${UI.esc(c.nombre)}</option>`
+  ).join('');
+
+  function fijarObjeto(objeto) {
+    seleccionado = objeto;
+    confirmar.disabled = false;
+    document.getElementById('fijo-emoji').textContent = objeto.emoji;
+    document.getElementById('fijo-nombre').textContent = objeto.nombre;
+    document.getElementById('fijo-tipo').textContent = objeto.suministro ? 'Suministro' : 'Único';
+    /* Un objeto único no lleva cantidad: está o no está */
+    const unico = !objeto.suministro;
+    cant.textContent = '1';
+    cantMenos.disabled = unico;
+    cantMas.disabled = unico;
+  }
+
+  function abrirCompra(objeto) {
+    acInput.value = '';
+    acLista.innerHTML = '';
+    acLista.classList.add('oculto');
+    cant.textContent = '1';
+    cantMenos.disabled = false;
+    cantMas.disabled = false;
+
+    if (objeto) {
+      /* Precargado desde una tarjeta: solo cantidad y caja */
+      fijarObjeto(objeto);
+      campoObjeto.classList.add('oculto');
+      objetoFijo.classList.remove('oculto');
+    } else {
+      seleccionado = null;
+      confirmar.disabled = true;
+      campoObjeto.classList.remove('oculto');
+      objetoFijo.classList.add('oculto');
+    }
+
+    dialogo.showModal();
+    if (objeto) selectCaja.focus();
+    else acInput.focus();
+  }
+
+  document.getElementById('abrir-compra').addEventListener('click', () => abrirCompra(null));
+
+  tarjetas.addEventListener('click', function (e) {
+    const boton = e.target.closest('[data-comprar]');
+    if (!boton) return;
+    abrirCompra(Datos.objeto(boton.dataset.comprar));
+  });
+
+  document.getElementById('cerrar-compra').addEventListener('click', () => dialogo.close());
+  document.getElementById('cancelar-compra').addEventListener('click', () => dialogo.close());
+
+  acInput.addEventListener('input', function () {
+    seleccionado = null;
+    confirmar.disabled = true;
+    const texto = acInput.value.trim();
+    const lista = texto ? Datos.buscar(texto).slice(0, 6) : [];
+    acLista.innerHTML = lista.map(o => `<li>
+      <button type="button" data-id="${UI.esc(o.id)}">
+        <span class="foto foto--s" aria-hidden="true">${o.emoji}</span>
+        <span>${UI.esc(o.nombre)}<br><small class="secundario">${o.suministro ? 'Suministro' : 'Único'}</small></span>
+      </button></li>`).join('');
+    acLista.classList.toggle('oculto', lista.length === 0);
+    acInput.setAttribute('aria-expanded', lista.length ? 'true' : 'false');
+  });
+
+  acLista.addEventListener('click', function (e) {
+    const boton = e.target.closest('button[data-id]');
+    if (!boton) return;
+    const objeto = Datos.objeto(boton.dataset.id);
+    fijarObjeto(objeto);
+    acInput.value = objeto.nombre;
+    acLista.classList.add('oculto');
+    acInput.setAttribute('aria-expanded', 'false');
+    selectCaja.focus();
+  });
+
+  cantMenos.addEventListener('click', function () {
+    cant.textContent = Math.max(1, parseInt(cant.textContent, 10) - 1);
+  });
+  cantMas.addEventListener('click', function () {
+    cant.textContent = parseInt(cant.textContent, 10) + 1;
+  });
+
+  confirmar.addEventListener('click', function () {
+    if (!seleccionado) return;
+    const numCaja = selectCaja.value;
+    const nombre = seleccionado.nombre;
+    let aviso;
+
+    if (seleccionado.suministro) {
+      const unidades = parseInt(cant.textContent, 10);
+      Datos.anadir(numCaja, seleccionado.id, unidades);
+      aviso = `${unidades} × ${nombre} → CAJA ${numCaja}`;
+    } else {
+      /* Único: está o no está, nunca cantidad 2 en la misma caja */
+      const yaEsta = STOCK.some(s => s.caja === numCaja && s.objeto === seleccionado.id);
+      if (!yaEsta) Datos.anadir(numCaja, seleccionado.id, 1);
+      aviso = `${nombre} → CAJA ${numCaja}`;
+    }
+
+    const id = seleccionado.id;
+    dialogo.close();
+    pintar(id);
+    UI.toast(aviso);
+  });
+
+  pintar();
+
+  /* Llegada desde la píldora "¿Dónde está…?" de la Home */
+  if (new URLSearchParams(location.search).get('buscar')) {
+    q.focus();
+  }
+})();
+</script>
+</body>
+</html>

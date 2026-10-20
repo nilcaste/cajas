@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<!-- Sin zoom: en una app de dos botones y una lista, el pellizco y el doble
+     toque sólo estropean la pantalla. El doble toque lo corta además
+     `touch-action` en el CSS, y el pellizco de Safari, un par de líneas en
+     app.js: iOS ignora `user-scalable` desde hace años. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#FAFAFA">
+<title>Cajas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..800&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.webmanifest">
+<!-- En la pantalla de inicio: icono propio, nombre corto y sin barra de
+     Safari, que es como se usa esto (una mano, delante de la caja). -->
+<link rel="apple-touch-icon" href="img/icono-180.png">
+<link rel="icon" href="img/icono-192.png" type="image/png">
+<meta name="apple-mobile-web-app-title" content="Cajas">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="stylesheet" href="css/sistema.css">
+</head>
+<body>
+
+<!-- Único punto de montaje: el router sustituye su contenido en cada ruta y
+     le pone la clase .vista--<ruta> para que el CSS decida la forma. -->
+<main id="vista" class="vista"></main>
+
+<script type="module" src="js/app.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prueba Ítem · med kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --fondo:   #FAFAFA;
+    --blanco:  #FFFFFF;
+    --tinta:   #17181A;
+    --carbon:  #232936;
+    --gris:    #8E8E93;
+    --borde:   #EDEDED;
+    --campo:   #F0F0F1;
+    --fuente: "Google Sans Flex", system-ui, -apple-system, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; }
+
+  @view-transition { navigation: auto; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; }
+  @media (prefers-reduced-motion: reduce) {
+    @view-transition { navigation: none; }
+  }
+
+  body {
+    background: var(--fondo);
+    color: var(--tinta);
+    font-family: var(--fuente);
+    -webkit-font-smoothing: antialiased;
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding: 24px 20px 140px;
+  }
+
+  .barra { display: flex; align-items: center; padding: 2px 0 16px; }
+  .icono-btn {
+    color: var(--tinta);
+    display: flex;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .3s cubic-bezier(.22, .9, .28, 1.2), opacity .12s ease;
+    text-decoration: none;
+  }
+  .icono-btn:active { transform: scale(.85); opacity: .6; transition-duration: .08s; }
+
+  /* Cabecera con la identidad del ítem */
+  .cabecera {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 2px 2px 18px;
+  }
+  .cabecera .tesela {
+    flex: none;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: #FAFAFB;
+    border: 1px solid #E6E6E7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    user-select: none;
+  }
+  .cabecera h1 { font-size: 24px; font-weight: 700; }
+  .cabecera .sub {
+    color: var(--gris);
+    font-size: 14px;
+    font-weight: 500;
+    margin-top: 1px;
+  }
+
+  .seccion {
+    color: #6E6E73;
+    font-size: 15px;
+    font-weight: 600;
+    margin: 4px 2px 10px;
+  }
+
+  /* Filas de caja con stepper */
+  .cajas-lista { display: flex; flex-direction: column; gap: 10px; }
+  .caja-fila {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--blanco);
+    border: 1px solid var(--borde);
+    border-radius: 20px;
+    padding: 10px 10px 10px 12px;
+    transition: transform .3s cubic-bezier(.22, .9, .28, 1.15), opacity .22s ease,
+                height .24s ease, margin .24s ease, padding .24s ease;
+  }
+  .caja-fila--fuera { opacity: 0; }
+  .caja-fila--entrando { opacity: 0; transform: translateY(10px); }
+  .caja-fila .num-tesela {
+    flex: none;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: var(--campo);
+    border: 1px solid #E6E6E7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .caja-fila .texto { flex: 1 1 auto; min-width: 0; }
+  .caja-fila .nombre {
+    color: #1B1B1D;
+    font-size: 16px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .caja-fila .ubi { color: var(--gris); font-size: 13.5px; font-weight: 500; margin-top: 1px; }
+
+  .stepper { flex: none; display: flex; align-items: center; gap: 3px; }
+  .stepper button, .quitar-caja {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid #E5E5E6;
+    background: var(--campo);
+    color: var(--tinta);
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .3s cubic-bezier(.22, .9, .28, 1.2), background-color .15s ease;
+  }
+  .stepper button:active, .quitar-caja:active {
+    transform: scale(.88);
+    background: #E8E8E9;
+    transition-duration: .08s;
+  }
+  .stepper .cifra {
+    min-width: 24px;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .cifra--pop { animation: pop .28s cubic-bezier(.22, .9, .28, 1.4); }
+  @keyframes pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.25); }
+    100% { transform: scale(1); }
+  }
+
+  /* Hoja: elegir otra caja */
+  dialog.hoja {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    width: min(390px, calc(100vw - 40px));
+    margin: auto auto 24px;
+  }
+  dialog.hoja::backdrop { background: rgba(23, 24, 26, .28); }
+  .hoja__cuerpo {
+    background: var(--blanco);
+    border: 1px solid var(--borde);
+    border-radius: 24px;
+    padding: 16px;
+    box-shadow: 0 18px 44px rgba(23, 24, 26, .18);
+  }
+  .hoja__titulo { font-size: 17px; font-weight: 700; margin: 2px 2px 12px; }
+  .hoja__lista { display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; }
+  .hoja__caja {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    text-align: left;
+    gap: 12px;
+    background: var(--campo);
+    border: 1px solid #E5E5E6;
+    border-radius: 14px;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--tinta);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .3s cubic-bezier(.22, .9, .28, 1.15);
+  }
+  .hoja__caja:active { transform: scale(.985); transition-duration: .08s; }
+  .hoja__caja .num { font-family: var(--mono); font-size: 13px; color: var(--gris); }
+
+  /* Toast del sistema, con deshacer */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(96px + env(safe-area-inset-bottom));
+    transform: translateX(-50%) translateY(8px);
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--carbon);
+    color: #fff;
+    border-radius: 999px;
+    padding: 12px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 10px 28px rgba(23, 24, 26, .24);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s ease, transform .22s cubic-bezier(.22, .9, .28, 1.2);
+  }
+  .toast--visible { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+  .toast .sep { opacity: .45; }
+  .toast .deshacer {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 0;
+    background: none;
+    color: #fff;
+    font: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding: 6px 2px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Flotante: añadir a otra caja */
+  .velo-inferior {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: 150px;
+    background: linear-gradient(to top, #FAFAFA 38%, rgba(250, 250, 250, .85) 62%, rgba(250, 250, 250, 0));
+    pointer-events: none;
+    z-index: 5;
+  }
+  .flotante {
+    position: fixed;
+    left: max(20px, calc(50vw - 195px));
+    right: max(20px, calc(50vw - 195px));
+    bottom: 24px;
+    z-index: 10;
+  }
+  .cta {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    border: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: var(--carbon);
+    color: #fff;
+    border-radius: 22px;
+    height: 56px;
+    font-family: inherit;
+    font-size: 16.5px;
+    font-weight: 600;
+    box-shadow: 0 6px 16px rgba(23, 24, 26, .16);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .34s cubic-bezier(.22, .9, .28, 1.2), box-shadow .2s ease;
+  }
+  .cta:active {
+    transform: scale(.97);
+    box-shadow: 0 3px 8px rgba(23, 24, 26, .18);
+    transition-duration: .09s;
+  }
+  .cta span { display: flex; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .icono-btn, .caja-fila, .stepper button, .quitar-caja, .hoja__caja, .cta, .toast { transition: none; }
+    .cifra--pop { animation: none; }
+  }
+  @media (min-width: 900px) {
+    body { max-width: 640px; padding-top: 44px; }
+    .flotante { left: max(20px, calc(50vw - 300px)); right: max(20px, calc(50vw - 300px)); }
+  }
+</style>
+</head>
+<body>
+
+<nav class="barra">
+  <a class="icono-btn" href="prueba-medkit.html" aria-label="Volver">
+    <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
+  </a>
+</nav>
+
+<header class="cabecera">
+  <span class="tesela" aria-hidden="true">🧽</span>
+  <div>
+    <h1>Estropajos</h1>
+    <div class="sub" id="sub-objeto">Suministro · 7 unidades en 3 cajas</div>
+  </div>
+</header>
+
+<div class="seccion">En estas cajas</div>
+<main class="cajas-lista" id="cajas-lista"></main>
+
+<dialog class="hoja" id="hoja">
+  <div class="hoja__cuerpo">
+    <div class="hoja__titulo">Añadir a otra caja</div>
+    <div class="hoja__lista" id="hoja-lista"></div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status">
+  <span id="toast-texto">Quitado</span>
+  <span class="sep" aria-hidden="true">·</span>
+  <button type="button" class="deshacer" id="deshacer">Deshacer</button>
+</div>
+
+<div class="velo-inferior" aria-hidden="true"></div>
+
+<div class="flotante">
+  <button type="button" class="cta" id="otra-caja">
+    <span aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 4.5v15M4.5 12h15"/></svg>
+    </span>
+    Añadir a otra caja
+  </button>
+</div>
+
+<script>
+(function () {
+  const CAJAS = {
+    '01': ['Baño repuestos', 'Armario del pasillo'],
+    '02': ['Limpieza', 'Bajo el fregadero'],
+    '03': ['Cocina repuestos', 'Alacena, balda alta'],
+    '04': ['Electricidad', 'Estantería entrada'],
+    '05': ['Herramientas', 'Suelo del trastero'],
+    '06': ['Deporte', 'Altillo'],
+    '07': ['Repuestos varios', 'Estantería fondo'],
+    '08': ['Textil e invierno', 'Bajo la cama'],
+  };
+  const stock = new Map([['02', 3], ['03', 2], ['07', 2]]);
+  const lista = document.getElementById('cajas-lista');
+
+  const iconoMas = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 4.5v15M4.5 12h15"/></svg>';
+  const iconoMenos = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4.5 12h15"/></svg>';
+
+  function filaHTML(num) {
+    const [nombre, ubi] = CAJAS[num];
+    return `<article class="caja-fila" data-caja="${num}">
+      <span class="num-tesela" aria-hidden="true">${num}</span>
+      <div class="texto">
+        <div class="nombre">${nombre}</div>
+        <div class="ubi">${ubi}</div>
+      </div>
+      <div class="stepper">
+        <button type="button" data-menos aria-label="Quitar una de esta caja">${iconoMenos}</button>
+        <span class="cifra">${stock.get(num)}</span>
+        <button type="button" data-mas aria-label="Añadir una a esta caja">${iconoMas}</button>
+      </div>
+    </article>`;
+  }
+
+  function resumen() {
+    const total = [...stock.values()].reduce((a, b) => a + b, 0);
+    const n = stock.size;
+    document.getElementById('sub-objeto').textContent =
+      `Suministro · ${total} ${total === 1 ? 'unidad' : 'unidades'} en ${n} ${n === 1 ? 'caja' : 'cajas'}`;
+  }
+
+  const reducida = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const toastEl = document.getElementById('toast');
+  const toastTexto = document.getElementById('toast-texto');
+
+  /* ---------- Toast con deshacer ---------- */
+  let tToast = null;
+  let accionDeshacer = null;
+  function mostrarToast(texto, accion) {
+    accionDeshacer = accion;
+    toastTexto.textContent = texto;
+    toastEl.classList.add('toast--visible');
+    clearTimeout(tToast);
+    tToast = setTimeout(ocultarToast, 5000);
+  }
+  function ocultarToast() {
+    clearTimeout(tToast);
+    toastEl.classList.remove('toast--visible');
+    accionDeshacer = null;
+  }
+  document.getElementById('deshacer').addEventListener('click', () => {
+    const accion = accionDeshacer;
+    ocultarToast();
+    if (accion) accion();
+  });
+
+  /* ---------- Salida colapsada y entrada suave ---------- */
+  function sacarFila(fila, alTerminar) {
+    if (reducida) { alTerminar(); return; }
+    const alto = fila.offsetHeight;
+    fila.style.height = alto + 'px';
+    fila.style.overflow = 'hidden';
+    void fila.offsetWidth;
+    fila.classList.add('caja-fila--fuera');
+    fila.style.height = '0px';
+    fila.style.paddingTop = '0px';
+    fila.style.paddingBottom = '0px';
+    if (fila.previousElementSibling) fila.style.marginTop = '-10px';
+    else fila.style.marginBottom = '-10px';
+    setTimeout(alTerminar, 240);
+  }
+  function entrar(fila) {
+    if (reducida) return;
+    fila.classList.add('caja-fila--entrando');
+    requestAnimationFrame(() => requestAnimationFrame(() =>
+      fila.classList.remove('caja-fila--entrando')));
+  }
+
+  /* ---------- Mantener pulsado repite ---------- */
+  function repetible(boton, accion) {
+    let espera = null;
+    let repite = null;
+    function parar() {
+      clearTimeout(espera);
+      clearInterval(repite);
+      espera = repite = null;
+    }
+    boton.addEventListener('pointerdown', e => {
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      accion();
+      espera = setTimeout(() => { repite = setInterval(accion, 140); }, 450);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev =>
+      boton.addEventListener(ev, parar));
+    boton.addEventListener('click', e => { if (e.detail === 0) accion(); });
+  }
+
+  function engancharFila(fila) {
+    const num = fila.dataset.caja;
+    const cifra = fila.querySelector('.cifra');
+    const [menos, mas] = fila.querySelectorAll('.stepper button');
+
+    function pon(n) {
+      if (fila.dataset.saliendo) return;
+      if (n <= 0) {
+        fila.dataset.saliendo = '1';
+        const previa = stock.get(num);
+        const siguiente = fila.nextElementSibling;
+        stock.delete(num);
+        sacarFila(fila, () => {
+          fila.remove();
+          resumen();
+          mostrarToast('Quitado', () => {
+            delete fila.dataset.saliendo;
+            stock.set(num, previa);
+            cifra.textContent = previa;
+            fila.classList.remove('caja-fila--fuera');
+            fila.style.height = fila.style.overflow = '';
+            fila.style.paddingTop = fila.style.paddingBottom = '';
+            fila.style.marginTop = fila.style.marginBottom = '';
+            if (siguiente && siguiente.parentNode === lista) lista.insertBefore(fila, siguiente);
+            else lista.appendChild(fila);
+            entrar(fila);
+            resumen();
+          });
+        });
+        return;
+      }
+      stock.set(num, n);
+      cifra.textContent = n;
+      cifra.classList.remove('cifra--pop');
+      void cifra.offsetWidth;
+      cifra.classList.add('cifra--pop');
+      resumen();
+    }
+
+    repetible(menos, () => pon(stock.get(num) - 1));
+    repetible(mas, () => pon(stock.get(num) + 1));
+  }
+
+  function pintar() {
+    lista.innerHTML = [...stock.keys()].map(filaHTML).join('');
+    lista.querySelectorAll('.caja-fila').forEach(engancharFila);
+    resumen();
+  }
+  pintar();
+
+  /* Añadir a otra caja: hoja con las cajas donde aún no está */
+  const hoja = document.getElementById('hoja');
+  const hojaLista = document.getElementById('hoja-lista');
+  document.getElementById('otra-caja').addEventListener('click', () => {
+    hojaLista.innerHTML = Object.keys(CAJAS).filter(n => !stock.has(n)).map(n =>
+      `<button type="button" class="hoja__caja" data-elegir="${n}">
+        <span class="num">${n}</span> ${CAJAS[n][0]}
+      </button>`).join('');
+    hoja.showModal();
+  });
+  hoja.addEventListener('click', e => {
+    if (e.target === hoja) { hoja.close(); return; }
+    const b = e.target.closest('[data-elegir]');
+    if (!b) return;
+    const num = b.dataset.elegir;
+    stock.set(num, 1);
+    hoja.close();
+    lista.insertAdjacentHTML('beforeend', filaHTML(num));
+    const fila = lista.lastElementChild;
+    engancharFila(fila);
+    entrar(fila);
+    resumen();
+  });
+})();
+</script>
+
+</body>
+</html>

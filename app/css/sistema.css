@@ -1,0 +1,1856 @@
+/* =============================================================================
+   Cajas — sistema visual
+   =============================================================================
+   Unificación literal del CSS de las maquetas aprobadas
+   (maquetas/prueba-medkit*.html). Móvil es la base; escritorio (≥900px) es el
+   mismo sistema respirando, nunca otra interfaz.
+
+   Índice
+     1. Tokens
+     2. Reset y documento
+     3. Transiciones de vista
+     4. Contenedor de pantalla (móvil base / escritorio)
+     5. Barra superior y cabeceras
+     6. Secciones y pistas
+     7. Pestañas y paneles
+     8. Campos, buscador y selector de caja
+     9. Teselas y filas
+    10. Steppers y botones cuadrados
+    11. Retícula de cajas y mosaico
+    11 bis. Sitios (rótulos plegables) y selector de sitio
+    11 ter. Formato: lista o retícula
+    12. Filas de acción, crear y chips
+    13. Estados vacíos
+    14. Velo, flotante, CTA y FAB
+    15. Toast
+    16. Hoja (dialog)
+    17. Utilidades
+    18. Menos movimiento
+    19. Escritorio (≥900px)
+    20. Puerta de acceso y pie de sesión (sólo con Supabase)
+    21. Modo búsqueda (móvil)
+   ========================================================================== */
+
+/* ------------------------------------------------------------- 1. Tokens -- */
+:root {
+  --fondo:        #FAFAFA;
+  --blanco:       #FFFFFF;
+  --tinta:        #17181A;
+  --tinta-2:      #1B1B1D;
+  --carbon:       #232936;
+  --carbon-claro: #2E3646;
+  --gris:         #8E8E93;
+  --gris-2:       #9A9CA0;
+  --seccion:      #6E6E73;
+  --placeholder:  #8E9095;
+
+  --borde:        #EDEDED;
+  --borde-campo:  #E5E5E6;
+  --borde-tesela: #E6E6E7;
+  --borde-fuerte: #D2D2D5;
+  --hairline:     #ECECEE;
+
+  --campo:        #F0F0F1;
+  --tesela:       #FAFAFB;
+  --pestanas:     #F2F2F3;
+  --discontinuo:  #D6D6D8;
+
+  --sombra-campo:    0 2px 10px rgba(23, 24, 26, .06);
+  --sombra-flotante: 0 6px 16px rgba(23, 24, 26, .16);
+  --sombra-hundida:  0 3px 8px rgba(23, 24, 26, .18);
+  --sombra-toast:    0 10px 28px rgba(23, 24, 26, .24);
+  --sombra-hoja:     0 18px 44px rgba(23, 24, 26, .18);
+  --sombra-modal:    0 24px 60px rgba(23, 24, 26, .18);
+
+  /* Rebote: aprieta rápido, suelta con muelle. */
+  --muelle:        cubic-bezier(.22, .9, .28, 1.15);
+  --muelle-fuerte: cubic-bezier(.22, .9, .28, 1.2);
+  --muelle-pop:    cubic-bezier(.22, .9, .28, 1.4);
+  --pastilla:      cubic-bezier(.3, .86, .3, 1.02);
+
+  --fuente: "Google Sans Flex", system-ui, -apple-system, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* ------------------------------------------------ 2. Reset y documento ---- */
+* { box-sizing: border-box; margin: 0; }
+
+html {
+  background: var(--fondo);
+  /* Ni doble toque para ampliar ni pellizco: esto se usa con una mano y con
+     las manos ocupadas, y el zoom sólo desencuadra la pantalla. */
+  touch-action: pan-x pan-y;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--fondo);
+  color: var(--tinta);
+  font-family: var(--fuente);
+  -webkit-font-smoothing: antialiased;
+  /* `svh` y no `vh`: en el móvil `100vh` cuenta la pantalla SIN la barra del
+     navegador, así que una pantalla que cabe entera se puede desplazar unos
+     pixeles a lo tonto. Con `svh` no sobra nada. */
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+/* ------------------------------------------ 3. Transiciones de vista ------ */
+/* El + de la home se convierte en la CTA de la caja y luego en el ✓ de
+   confirmar. La forma (fondo carbón + radio) vive en el contenedor: es lo
+   único que se estira; los contenidos no se deforman. */
+::view-transition-group(boton-anadir) {
+  animation-duration: .42s;
+  animation-timing-function: cubic-bezier(.32, 1.26, .4, 1);
+}
+::view-transition-image-pair(boton-anadir) {
+  border-radius: 22px;
+  overflow: clip;
+  background: #232936;
+  isolation: auto;
+}
+::view-transition-old(boton-anadir),
+::view-transition-new(boton-anadir) {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  mix-blend-mode: normal;
+}
+::view-transition-old(boton-anadir) { animation: vt-fuera .1s ease both; }
+::view-transition-new(boton-anadir) { animation: vt-dentro .2s ease .15s both; }
+@keyframes vt-fuera { to { opacity: 0; } }
+@keyframes vt-dentro { from { opacity: 0; } to { opacity: 1; } }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; }
+
+/* ------------------------------------------ 4. Contenedor de pantalla ----- */
+/* La capa de los pasos de proceso. Va POR ENCIMA de #vista, que se queda
+   montada debajo con su scroll intacto. En móvil es opaca y ocupa la
+   pantalla entera (se ve exactamente como antes); en escritorio se vuelve
+   velo y deja ver la pantalla de la que vienes (sección 19).
+
+   Por debajo del toast (z-index 20), que tiene que leerse siempre. */
+#capa-proceso {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--fondo);
+}
+
+/* Sólo puede haber UN `boton-anadir` en el documento: con la vista de fondo
+   viva debajo, su + o su CTA competiría con la del proceso y la transición
+   se abortaría entera. Mientras hay proceso, el nombre es del proceso. */
+body.modal #vista .fab,
+body.modal #vista .cta { view-transition-name: none; }
+
+/* Todas las pantallas comparten la misma columna en móvil. */
+.vista {
+  display: block;
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100svh;
+  /* Añadida a la pantalla de inicio, la app va a pantalla completa: sin estas
+     zonas seguras el título se metería debajo del reloj y la barra flotante
+     debajo de la raya del gesto. En Safari valen cero y no se nota. */
+  padding: calc(24px + env(safe-area-inset-top, 0px)) 20px
+           calc(140px + env(safe-area-inset-bottom, 0px));
+}
+/* Con barra pegajosa el aire de arriba lo pone ella entero: así no hay salto
+   entre estar arriba del todo y estar pegada. Y el aire de abajo se le pasa
+   al envoltorio: una barra pegada sólo llega hasta donde llega su padre, y
+   con el hueco por fuera se despegaría en los últimos centímetros. */
+.vista:has(> div > .barra) {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: 0;
+}
+.vista:has(> div > .barra) > div {
+  padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+}
+
+/* --------------------------------- 5. Barra superior y cabeceras ---------- */
+/* La barra no se va con el scroll: el atrás y las acciones de la pantalla
+   tienen que estar siempre a mano, sobre todo en una caja con treinta ítems.
+
+   Se pega justo debajo de la zona segura (la muesca, cuando la app va a
+   pantalla completa) y su fondo se estira a los lados con márgenes negativos,
+   para que el contenido pase POR DEBAJO y no asome por los costados. El
+   degradado de después evita el corte seco. */
+.barra {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 -20px 12px;
+  padding: 14px 20px 12px;
+  background: var(--fondo);
+}
+.barra::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 14px;
+  background: linear-gradient(to bottom, var(--fondo), rgba(250, 250, 250, 0));
+  pointer-events: none;
+}
+/* Con un solo control, se queda a la izquierda. */
+.barra--sola { justify-content: flex-start; }
+
+.icono-btn {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--tinta);
+  display: flex;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .3s var(--muelle-fuerte), opacity .12s ease;
+  text-decoration: none;
+}
+.icono-btn:active { transform: scale(.85); opacity: .6; transition-duration: .08s; }
+/* Dos acciones a la derecha de la barra (editar y eliminar). */
+.barra__grupo { display: flex; align-items: center; gap: 18px; }
+
+/* El nombre del ítem también se toca para editarlo: es lo primero que uno
+   intenta. Botón por dentro, texto por fuera — ni filete ni fondo. */
+.cabecera__editable {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity .12s ease;
+}
+.cabecera__editable:active { opacity: .55; }
+
+.cabecera { padding: 2px 2px 16px; }
+.cabecera h1 { font-size: 25px; font-weight: 700; }
+.cabecera .sub {
+  color: var(--gris);
+  font-size: 14.5px;
+  font-weight: 500;
+  margin-top: 2px;
+}
+.cabecera .sub .num { font-family: var(--mono); font-size: 13px; }
+
+/* Home: título a la izquierda, sitio libre a la derecha. */
+.cabecera--home {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 4px 2px 18px;
+}
+.cabecera--home .sub { color: var(--gris-2); }
+
+/* Caja e ítem: identidad delante del título. */
+.cabecera--identidad {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 2px 2px 18px;
+}
+.cabecera--identidad h1 { font-size: 25px; font-weight: 700; }
+.cabecera--identidad .num-tesela,
+.cabecera--identidad .tesela {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+.cabecera--identidad .num-tesela {
+  background: var(--campo);
+  border: 1px solid var(--borde-tesela);
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 700;
+}
+.cabecera--identidad .tesela {
+  background: var(--tesela);
+  border: 1px solid var(--borde-tesela);
+  font-size: 32px;
+  overflow: hidden;
+}
+/* En la ficha del ítem la foto es el sujeto de la pantalla, no un adorno al
+   lado del título: se pide verla, así que aquí manda ella. */
+.vista--item .cabecera--identidad { align-items: center; gap: 16px; }
+.vista--item .cabecera--identidad .tesela {
+  width: 90px;
+  height: 90px;
+  border-radius: 26px;
+  font-size: 52px;
+}
+/* La cara del ítem es un botón: ahí se le pone la foto. */
+.tesela--pulsable {
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .3s var(--muelle-fuerte);
+}
+.tesela--pulsable:active { transform: scale(.92); transition-duration: .08s; }
+
+/* ------------------------------------------- 6. Secciones y pistas -------- */
+.seccion {
+  color: var(--seccion);
+  font-size: 15px;
+  font-weight: 600;
+  margin: 20px 2px 10px;
+}
+.seccion--primera { margin-top: 4px; }
+.pista {
+  color: var(--gris);
+  font-size: 13px;
+  font-weight: 500;
+  margin: 8px 2px 0;
+}
+
+/* -------------------------------------- 7. Pestañas y paneles ------------- */
+/* Las pestañas Cajas / Inventario tampoco se van: son el mando de la pantalla
+   y con el inventario largo hay que poder cambiar sin subir del todo. */
+.franja {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 6;
+  margin: 0 -20px 12px;
+  padding: 6px 20px 10px;
+  background: var(--fondo);
+}
+.franja::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 12px;
+  background: linear-gradient(to bottom, var(--fondo), rgba(250, 250, 250, 0));
+  pointer-events: none;
+}
+
+/* La muesca, tapada: sin esto el contenido se vería pasar por encima de las
+   barras pegadas cuando la app va a pantalla completa. En el navegador la
+   zona segura vale cero y esta franja no existe. */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 0px);
+  background: var(--fondo);
+  z-index: 7;
+  pointer-events: none;
+}
+
+/* La pastilla blanca es UNA sola pieza que se desliza. */
+.pestanas {
+  position: relative;
+  display: flex;
+  background: var(--pestanas);
+  border: 1px solid rgba(17, 17, 17, .03);
+  border-radius: 17px;
+  padding: 2px;
+}
+.pestanas__pastilla {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc(50% - 2px);
+  border-radius: 15px;
+  background: var(--blanco);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+  transition: transform .28s var(--pastilla);
+  will-change: transform;
+}
+.pestanas[data-activa="1"] .pestanas__pastilla { transform: translateX(100%); }
+.pestanas__tab {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  border-radius: 15px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  color: #85858A;
+  cursor: pointer;
+  transition: color .18s ease, font-weight .18s ease, opacity .12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.pestanas__tab[aria-selected="true"] { color: #0E0E10; font-weight: 600; }
+/* Pulsación: se atenúa solo la pestaña no activa que estás tocando. */
+.pestanas__tab:active:not([aria-selected="true"]) { opacity: .45; }
+.pestanas__tab:focus-visible { outline: 2px solid var(--carbon); outline-offset: -4px; }
+
+.panel { transition: opacity .22s ease, transform .26s var(--pastilla); }
+.panel[hidden] { display: none; }
+.panel--entrando { opacity: 0; transform: translateY(8px); }
+
+/* --------------------------- 8. Campos, buscador y selector de caja ------- */
+.campo {
+  display: flex;
+  align-items: center;
+  background: var(--campo);
+  border: 1px solid var(--borde-campo);
+  border-radius: 18px;
+  height: 52px;
+  padding: 0 16px;
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+.campo input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 16.5px;
+  font-weight: 500;
+  color: var(--tinta);
+  caret-color: var(--carbon);
+}
+.campo input.mono { font-family: var(--mono); font-size: 16px; }
+.campo input::placeholder { color: var(--placeholder); font-weight: 500; }
+.campo:focus-within {
+  background: var(--blanco);
+  border-color: var(--borde-fuerte);
+  box-shadow: var(--sombra-campo);
+}
+/* Con emoji delante, el campo aprieta el borde izquierdo. */
+.campo--con-emoji { padding-left: 8px; }
+
+.emoji-nombre {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  margin-right: 10px;
+  border-radius: 12px;
+  background: var(--blanco);
+  border: 1px solid var(--borde-tesela);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .3s var(--muelle-fuerte);
+}
+.emoji-nombre:active { transform: scale(.88); transition-duration: .08s; }
+/* Todavía sin elegir: un icono de la UI, no un emoji de relleno. */
+.emoji-nombre--vacio { color: var(--placeholder); }
+.emoji-nombre--vacio span { display: flex; }
+
+.buscador {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--campo);
+  border: 1px solid var(--borde-campo);
+  border-radius: 18px;
+  height: 52px;
+  padding: 0 16px;
+  color: var(--placeholder);
+  cursor: text;
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+.buscador span { display: flex; transition: color .16s ease; }
+.buscador input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 16.5px;
+  font-weight: 400;
+  color: var(--tinta);
+  caret-color: var(--carbon);
+}
+.buscador input::placeholder { color: var(--placeholder); }
+/* El navegador dibuja su propia aspa en `type="search"` (azul en iOS, gris en
+   escritorio): ajena al sistema. Se quita y la ponemos nosotros. */
+.buscador input::-webkit-search-cancel-button,
+.buscador input::-webkit-search-decoration { -webkit-appearance: none; display: none; }
+.buscador__limpiar {
+  flex: none;
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gris);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .3s var(--muelle-fuerte), color .15s ease;
+}
+.buscador__limpiar:hover { color: var(--seccion); }
+.buscador__limpiar:active { transform: scale(.85); transition-duration: .08s; }
+.buscador__limpiar[hidden] { display: none; }
+/* Foco: el campo se enciende a blanco y el borde toma cuerpo. */
+.buscador:focus-within {
+  background: var(--blanco);
+  border-color: var(--borde-fuerte);
+  box-shadow: var(--sombra-campo);
+}
+.buscador:focus-within span { color: #55565A; }
+/* El buscador de la barra flotante es un punto más alto y más claro. */
+.buscador--flotante {
+  flex: 1 1 auto;
+  height: 56px;
+  padding: 0 18px;
+  background: var(--campo);
+  border-color: var(--borde-campo);
+}
+.buscador--flotante input { font-size: 17px; }
+
+/* Elegir caja no es un campo cualquiera: es la decisión de la pantalla. */
+.selector-caja {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--blanco);
+  border: 1.5px solid var(--carbon);
+  border-radius: 18px;
+  height: 54px;
+  padding: 0 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+.selector-caja__prefijo {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gris);
+}
+.selector-caja select {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-family: var(--mono);
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--tinta);
+  cursor: pointer;
+}
+.selector-caja .flecha { flex: none; color: #C9C9CC; display: flex; pointer-events: none; }
+
+/* --------------------------------------------- 9. Teselas y filas --------- */
+.tesela {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--tesela);
+  border: 1px solid var(--borde-tesela);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  user-select: none;
+  overflow: hidden;
+}
+/* La tesela cuando lleva un icono de UI dentro (crear, hacer foto, QR). */
+.tesela--icono { background: var(--campo); color: var(--tinta); }
+.num-tesela {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--campo);
+  border: 1px solid var(--borde-tesela);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  user-select: none;
+}
+.mini {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  background: var(--tesela);
+  border: 1px solid var(--borde-tesela);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  user-select: none;
+  overflow: hidden;
+}
+
+.lista { display: flex; flex-direction: column; gap: 10px; }
+/* Dentro de un panel con pestañas, la lista respira lo mismo que la retícula. */
+.panel > .lista { margin-top: 6px; }
+
+.fila {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 20px;
+  padding: 10px 10px 10px 12px;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .3s var(--muelle), opacity .22s ease,
+              height .24s ease, margin .24s ease, padding .24s ease;
+}
+.fila:active { transform: scale(.985); transition-duration: .09s; }
+/* Contenido de una caja: la fila respira un punto más. */
+.fila--items { padding: 12px 12px 12px 14px; }
+.fila--items .tesela { font-size: 30px; }
+/* Inventario: dos líneas de texto y los chips de caja debajo. */
+.fila--inv { padding: 12px 14px; flex-wrap: nowrap; }
+
+.fila .texto { flex: 1 1 auto; min-width: 0; }
+.fila .nombre {
+  color: var(--tinta-2);
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fila .nombre b { font-weight: 700; }
+.fila .tipo,
+.fila .ubi,
+.fila .meta {
+  color: var(--gris);
+  font-size: 13.5px;
+  font-weight: 500;
+  margin-top: 1px;
+}
+
+/* Fila saliendo: se encoge para que las de abajo no salten. */
+.fila--fuera { opacity: 0; }
+/* Fila entrando (deshacer o recién añadida). */
+.fila--entrando { opacity: 0; transform: translateY(10px); }
+.fila--flash { animation: flash 1.2s ease; }
+@keyframes flash {
+  from { background: var(--campo); }
+  to   { background: var(--blanco); }
+}
+
+/* Chips de caja del inventario. */
+/* Las cajas donde está el ítem, alineadas a la derecha. Si son muchas bajan
+   de línea, pero siguen pegadas a ese lado: así la columna de la derecha se
+   lee de un vistazo, sin zigzag. */
+.fila__cajas {
+  flex: 0 1 auto;
+  max-width: 48%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-left: auto;
+}
+.chip-caja {
+  -webkit-appearance: none;
+  appearance: none;
+  font-family: var(--mono);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--blanco);
+  border: 1px solid var(--borde-tesela);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--tinta);
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .3s var(--muelle-fuerte), border-color .15s ease;
+}
+.chip-caja:active { transform: scale(.92); transition-duration: .08s; }
+/* Lo que está sin clasificar no tiene número que enseñar: el chip dice su
+   sitio, y con texto el monoespaciado sobra. */
+.chip-caja--sitio {
+  font-family: var(--fuente);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--seccion);
+  padding-left: 9px;
+  /* Un sitio puede llamarse "Armario del pasillo de la entrada": el chip no
+     puede comerse la fila entera. */
+  max-width: 150px;
+}
+.chip-caja--sitio .n {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.chip-caja .x { color: var(--gris); }
+
+/* --------------------------- 10. Steppers y botones cuadrados ------------- */
+.btn-cuadrado,
+.stepper button {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 1px solid var(--borde-campo);
+  background: var(--campo);
+  color: var(--tinta);
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .3s var(--muelle-fuerte), background-color .15s ease;
+}
+.btn-cuadrado:active,
+.stepper button:active {
+  transform: scale(.88);
+  background: #E8E8E9;
+  transition-duration: .08s;
+}
+/* La cifra necesita aire a los lados: pegada a los botones se lee como parte
+   de ellos y no como el dato que es. */
+.stepper { flex: none; display: flex; align-items: center; gap: 8px; }
+.stepper .cifra {
+  min-width: 26px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.cifra--pop { animation: pop .28s var(--muelle-pop); }
+@keyframes pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+/* --------------------------- 11. Retícula de cajas y mosaico -------------- */
+.reticula {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 6px;
+}
+.caja {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 24px;
+  padding: 7px 7px 16px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  /* suelta con muelle… */
+  transition: transform .34s var(--muelle);
+}
+/* …aprieta rápido */
+.caja:active { transform: scale(.977); transition-duration: .09s; }
+.mosaico {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1px;
+  background: var(--borde-tesela);
+  border: 1px solid var(--borde-tesela);
+  border-radius: 17px;
+  overflow: hidden;
+}
+.mosaico i {
+  aspect-ratio: 1;
+  overflow: hidden;
+  min-width: 0;
+  background: var(--tesela);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  line-height: 1;
+  font-style: normal;
+  user-select: none;
+}
+.caja__nombre {
+  color: var(--tinta-2);
+  font-size: 17.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 14px 7px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.caja__meta {
+  color: var(--gris);
+  font-size: 14px;
+  font-weight: 500;
+  margin: 4px 7px 0;
+}
+
+/* Última celda: crear caja nueva. */
+.caja-nueva {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  background: none;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 150px;
+  padding: 20px 12px;
+  border: 1.5px dashed var(--discontinuo);
+  border-radius: 24px;
+  color: var(--gris);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition: transform .34s var(--muelle), border-color .15s ease, color .15s ease;
+}
+.caja-nueva:active { transform: scale(.977); transition-duration: .09s; }
+.caja-nueva span { display: flex; }
+
+/* --------------------------- 11 bis. Sitios (rótulos plegables) ----------- */
+/* Un SITIO —el armario negro, el trastero— es un rótulo, no una pantalla: sus
+   cajas se ven de un vistazo y se entra en una de un toque. Anidarlas dentro
+   de una carpeta cobraría un peaje por un nivel que no filtra nada, porque
+   casi todo vive en el mismo mueble.
+
+   Lo que sí hace falta es poderlo quitar de en medio: por eso el rótulo se
+   pliega, y el pliegue se recuerda. */
+.sitios { display: block; }
+.sitios .reticula { margin-top: 0; }
+
+.seccion--sitio {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 22px 0 10px;
+  padding: 6px 2px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity .12s ease;
+}
+.sitios > .seccion--sitio:first-child { margin-top: 6px; }
+.seccion--sitio:active { opacity: .5; }
+.seccion--sitio:focus-visible { outline: 2px solid var(--carbon); outline-offset: 2px; border-radius: 10px; }
+.seccion__titulo {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* El galón mira abajo cuando está abierto y a la derecha cuando está plegado:
+   la convención de una carpeta, sin ser una carpeta. */
+.seccion__galon {
+  display: flex;
+  flex: none;
+  color: var(--gris-2);
+  transition: transform .26s var(--pastilla);
+}
+.seccion--sitio[aria-expanded="false"] .seccion__galon { transform: rotate(-90deg); }
+.seccion__cuenta {
+  flex: none;
+  color: var(--gris-2);
+  font-size: 13.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* El cuerpo se pliega con `grid-template-rows` de 1fr a 0fr, que es lo único
+   que anima una altura desconocida sin medirla a mano. */
+.sitio__cuerpo {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows .3s var(--pastilla), opacity .2s ease;
+}
+.sitio__cuerpo > div { overflow: hidden; min-height: 0; }
+.seccion--sitio[aria-expanded="false"] + .sitio__cuerpo {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+/* Crear caja deja de ser la última celda de la retícula: partida en sitios ya
+   no hay una "última". Pasa a ser una fila entera al final. */
+.caja-nueva--fila {
+  flex-direction: row;
+  min-height: 0;
+  height: 60px;
+  border-radius: 20px;
+  margin-top: 22px;
+}
+
+/* -------------------------------------------- Selector de sitio ---------- */
+.chips-sitio { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-sitio {
+  -webkit-appearance: none;
+  appearance: none;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 15px;
+  border-radius: 14px;
+  border: 1px solid var(--borde-campo);
+  background: var(--blanco);
+  color: var(--tinta);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .3s var(--muelle-fuerte), background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.chip-sitio:active { transform: scale(.94); transition-duration: .08s; }
+.chip-sitio[aria-pressed="true"] {
+  background: var(--carbon);
+  border-color: var(--carbon);
+  color: #fff;
+  font-weight: 600;
+}
+.chip-sitio--nuevo { border-style: dashed; border-color: var(--discontinuo); color: var(--gris); }
+.chip-sitio--nuevo[aria-pressed="true"] { border-style: solid; }
+.chips-sitio + .campo { margin-top: 10px; }
+
+/* ------------------------- 11 ter. Formato: lista o retícula -------------- */
+/* El botón vive en la franja, pegado a las pestañas, y mide lo mismo que
+   ellas (50) para que la fila cierre en una línea. Enseña el formato AL QUE
+   VAS: es un botón, y un botón dice lo que hace.
+
+   Sólo el inventario cambia de formato — las cajas se ven siempre en retícula,
+   que el mosaico es lo que las identifica de un vistazo. En la pestaña de
+   cajas el botón se APAGA en vez de desaparecer: si desapareciera, las
+   pestañas darían un salto de 58px cada vez que cambias de pestaña. */
+.franja__fila { display: flex; align-items: center; gap: 10px; }
+.franja__fila .pestanas { flex: 1 1 auto; min-width: 0; }
+.conmutador {
+  flex: none;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 50px;
+  height: 50px;
+  border: 1px solid rgba(17, 17, 17, .03);
+  border-radius: 17px;
+  background: var(--pestanas);
+  color: var(--seccion);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .3s var(--muelle-fuerte), opacity .18s ease, color .15s ease;
+}
+.conmutador:active { transform: scale(.9); transition-duration: .08s; }
+.conmutador--apagado {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Una caja contada en una línea: el mosaico se encoge y el nombre manda. */
+.mosaico--mini {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 15px;
+}
+.mosaico--mini i { font-size: 21px; }
+
+/* Un ítem en tarjeta: la foto grande, que es lo que un mosaico de 2×2 no deja
+   ver, y el nombre debajo. */
+.rejilla {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 6px;
+}
+.pieza {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 24px;
+  padding: 7px 7px 16px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition: transform .34s var(--muelle);
+}
+.pieza:active { transform: scale(.977); transition-duration: .09s; }
+.pieza__cara {
+  aspect-ratio: 1;
+  border-radius: 17px;
+  background: var(--tesela);
+  border: 1px solid var(--borde-tesela);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 64px;
+  line-height: 1;
+  overflow: hidden;
+}
+.pieza__nombre {
+  color: var(--tinta-2);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 12px 7px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  /* Dos líneas reservadas SIEMPRE: si no, el nombre corto y el largo dejan las
+     metas a distinta altura y la retícula se ve descuadrada. */
+  min-height: 40px;
+}
+.pieza__nombre b { font-weight: 800; }
+.pieza__meta {
+  color: var(--gris);
+  font-size: 13.5px;
+  font-weight: 500;
+  margin: 6px 7px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.pieza__meta .chip-caja { padding: 3px 8px; font-size: 11px; }
+/* Dentro de una caja la tarjeta lleva su stepper: es lo que se viene a tocar.
+   Con las MISMAS proporciones que en la lista —no estirado de lado a lado— y
+   justificado a la derecha, como los chips del inventario. */
+.pieza__accion {
+  margin: 12px 7px 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ------------------------- 12. Filas de acción, crear y chips ------------- */
+.accion {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  text-align: left;
+  gap: 14px;
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 20px;
+  padding: 10px 12px;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .3s var(--muelle);
+}
+.accion:active { transform: scale(.985); transition-duration: .09s; }
+.accion .texto { flex: 1 1 auto; min-width: 0; }
+.accion .nombre { font-size: 16px; font-weight: 600; color: var(--tinta-2); display: block; }
+.accion .tipo { color: var(--gris); font-size: 13.5px; font-weight: 500; margin-top: 1px; display: block; }
+.accion .flecha { flex: none; color: #C9C9CC; display: flex; }
+
+/* Con una foto arrastrada encima: la fila se convierte en la invitación a
+   soltarla. El discontinuo dice "aquí cabe algo" sin necesidad de más. */
+.accion.soltando {
+  border-style: dashed;
+  border-color: var(--carbon);
+  background: var(--campo);
+}
+.accion.soltando > * { visibility: hidden; }
+.accion.soltando::after {
+  content: 'Suelta aquí tu foto';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--carbon);
+  pointer-events: none;
+}
+
+/* Lo que no tiene vuelta atrás se dice en rojo. Es la única nota de color de
+   toda la app, y por eso funciona: sólo aparece donde hay que pensárselo. */
+.accion--destructiva {
+  border-color: #F0D3CF;
+  background: #FEF7F6;
+}
+.accion--destructiva .nombre { color: #C0362C; }
+.accion--destructiva .tesela {
+  background: #FBE7E4;
+  border-color: #F2CFCA;
+  color: #C0362C;
+}
+.accion--destructiva:hover { border-color: #E5BDB7; }
+
+/* Crear nuevo: aparece al buscar sin resultado exacto. */
+.crear {
+  width: 100%;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  text-align: left;
+  gap: 14px;
+  background: transparent;
+  border: 1.5px dashed var(--discontinuo);
+  border-radius: 20px;
+  padding: 10px 10px 10px 12px;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .3s var(--muelle-fuerte);
+}
+.crear:active { transform: scale(.985); transition-duration: .08s; }
+.crear .tesela { background: var(--campo); border-color: var(--campo); color: var(--tinta); }
+.crear .nombre { font-size: 16px; font-weight: 600; color: var(--tinta-2); display: block; }
+.crear .tipo { color: var(--gris); font-size: 13.5px; font-weight: 500; margin-top: 1px; display: block; }
+
+/* Chips de sugerencia (recientes). */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  -webkit-appearance: none;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  padding: 9px 14px 9px 10px;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--tinta-2);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .3s var(--muelle-fuerte), background-color .15s ease;
+}
+.chip:active { transform: scale(.94); transition-duration: .08s; }
+.chip .emoji { font-size: 18px; }
+
+/* ------------------------------------------- 13. Estados vacíos ----------- */
+.vacio { text-align: center; padding: 44px 20px 24px; }
+.vacio--holgado { padding: 48px 20px; }
+.vacio__emoji {
+  font-size: 44px;
+  line-height: 1;
+  display: block;
+  opacity: .38;
+  margin-bottom: 12px;
+}
+.vacio__titulo { font-size: 17px; font-weight: 600; color: var(--tinta); }
+.vacio__sub { color: var(--gris); font-size: 14.5px; font-weight: 500; margin-top: 3px; }
+
+/* Caja sin nada dentro: la foto de la caja real en vez de un emoji. La foto
+   viene sobre blanco, así que `multiply` la funde con el fondo sin necesidad
+   de recortarla. Con la caja más grande, el texto sube un punto para que la
+   proporción entre los tres siga leyéndose. */
+.vacio--caja { padding: 34px 20px 40px; }
+.vacio__caja {
+  display: block;
+  width: 168px;
+  max-width: 62%;
+  height: auto;
+  margin: 0 auto 14px;
+  mix-blend-mode: multiply;
+}
+.vacio--caja .vacio__titulo { font-size: 19px; }
+.vacio--caja .vacio__sub { font-size: 15.5px; margin-top: 4px; }
+
+/* La foto de un ítem ocupa su hueco entero, sea tesela, mini o celda del
+   mosaico: la forma la sigue poniendo el contenedor. */
+.foto {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* --------------------------- 14. Velo, flotante, CTA y FAB ---------------- */
+/* Velo: el contenido se disuelve antes de llegar a la barra. */
+.velo-inferior {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(150px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, #FAFAFA 38%, rgba(250, 250, 250, .85) 62%, rgba(250, 250, 250, 0));
+  pointer-events: none;
+  z-index: 5;
+}
+.flotante {
+  position: fixed;
+  left: max(20px, calc(50vw - 195px));
+  right: max(20px, calc(50vw - 195px));
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 10;
+}
+.cta {
+  width: 100%;
+  view-transition-name: boton-anadir;
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--carbon);
+  color: #fff;
+  border-radius: 22px;
+  height: 56px;
+  font-family: inherit;
+  font-size: 16.5px;
+  font-weight: 600;
+  box-shadow: var(--sombra-flotante);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .34s var(--muelle-fuerte), box-shadow .2s ease;
+}
+.cta:active {
+  transform: scale(.97);
+  box-shadow: var(--sombra-hundida);
+  transition-duration: .09s;
+}
+.cta span { display: flex; }
+/* Trabajando: ni se puede pulsar ni hace falta preguntarse si va. */
+.cta:disabled { cursor: default; }
+.cta--trabajando { background: var(--carbon-claro); font-weight: 500; }
+.cta__giro {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2.4px solid rgba(255, 255, 255, .3);
+  border-top-color: #fff;
+  animation: giro .7s linear infinite;
+}
+@keyframes giro { to { transform: rotate(360deg); } }
+
+/* Una CTA que no participa en el morph (p. ej. "Añadir a otra caja"). */
+.cta--sin-morph { view-transition-name: none; }
+
+.fab {
+  flex: none;
+  position: relative;
+  view-transition-name: boton-anadir;
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 22px;
+  background: var(--carbon);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--sombra-flotante);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .34s var(--muelle-fuerte), box-shadow .2s ease;
+}
+.fab:active {
+  transform: scale(.9);
+  box-shadow: var(--sombra-hundida);
+  transition-duration: .09s;
+}
+/* Globo con el recuento de lo que llevas añadido. */
+.fab .globo {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--blanco);
+  color: var(--tinta);
+  border: 1px solid var(--borde);
+  box-shadow: 0 2px 6px rgba(23, 24, 26, .12);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.globo--pop { animation: pop .28s var(--muelle-pop); }
+
+/* Controles de cabecera: solo escritorio. */
+.escritorio-controles { display: none; }
+
+/* --------------------------------------------------- 15. Toast ----------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  transform: translateX(-50%) translateY(8px);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--carbon);
+  color: #fff;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: var(--sombra-toast);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease, transform .22s var(--muelle-fuerte);
+}
+.toast--visible { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+.toast .sep { opacity: .45; }
+.toast .deshacer {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  background: none;
+  color: #fff;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 6px 2px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------------------------------------------- 16. Hoja (dialog) -------- */
+dialog.hoja {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  width: min(390px, calc(100vw - 40px));
+  margin: auto auto 24px;
+}
+dialog.hoja::backdrop { background: rgba(23, 24, 26, .28); }
+.hoja__cuerpo {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 24px;
+  padding: 16px;
+  box-shadow: var(--sombra-hoja);
+}
+.hoja__titulo { font-size: 17px; font-weight: 700; margin: 2px 2px 12px; }
+.hoja__separador { color: var(--gris); font-size: 13px; font-weight: 600; margin: 14px 2px 8px; }
+.hoja__lista { display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; }
+.hoja__caja {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  text-align: left;
+  gap: 12px;
+  background: var(--campo);
+  border: 1px solid var(--borde-campo);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--tinta);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .3s var(--muelle);
+}
+.hoja__caja:active { transform: scale(.985); transition-duration: .08s; }
+.hoja__caja .num { font-family: var(--mono); font-size: 13px; color: var(--gris); }
+
+/* Reordenar a dedo: la fila levantada se despega y las demás se apartan.
+   La transición va en las OTRAS filas, no en la que llevas — esa tiene que
+   pegarse al dedo sin retraso. */
+/* Una sola clase para las tres formas que se arrastran: la fila, la tarjeta
+   de caja y la tarjeta de ítem. */
+.levantada {
+  position: relative;
+  z-index: 3;
+  box-shadow: var(--sombra-flotante);
+  border-color: var(--borde-fuerte);
+  transform-origin: center;
+  transition: box-shadow .16s ease, border-color .16s ease;
+}
+.lista .fila { transition: transform .18s var(--pastilla); }
+
+/* El pulsado largo y el arrastre son NUESTROS. Sin esto, iOS abre su menú de
+   "Copiar imagen" al aguantar el dedo sobre una foto del mosaico, y cualquier
+   navegador arranca su propio arrastre de imagen en cuanto mueves — y ése
+   cancela el de reordenar antes de que empiece. */
+.caja, .fila, .pieza, .mosaico i, .mini, .tesela, .foto, .pieza__cara {
+  -webkit-touch-callout: none;
+}
+.foto, .mosaico img {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Mientras se arrastra no se selecciona texto ni se hace scroll con el dedo. */
+body.reordenando { user-select: none; -webkit-user-select: none; }
+body.reordenando .lista,
+body.reordenando .rejilla,
+body.reordenando .reticula { touch-action: none; }
+body.reordenando .caja,
+body.reordenando .pieza,
+body.reordenando .fila { transition: transform .18s var(--pastilla); }
+/* La levantada sigue al dedo: sin transición o iría siempre por detrás. */
+body.reordenando .levantada { transition: box-shadow .16s ease, border-color .16s ease; }
+
+/* Dos botones de verdad debajo de la foto: recortar y eliminar. No son
+   enlaces ni texto suelto — se pulsan, así que tienen cuerpo y filete. */
+.botones-foto {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.botones-foto.oculto { display: none; }
+.boton-linea {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--borde-campo);
+  border-radius: 16px;
+  background: var(--blanco);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--tinta-2);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .3s var(--muelle), border-color .15s ease, color .15s ease;
+}
+.boton-linea:hover { border-color: var(--borde-fuerte); }
+.boton-linea:active { transform: scale(.96); transition-duration: .08s; }
+.boton-linea:disabled { color: var(--gris); cursor: default; transform: none; }
+/* Eliminar no compite con recortar: mismo cuerpo, menos voz. */
+.boton-linea--baja { color: var(--gris); }
+.boton-linea--baja:hover { color: var(--seccion); }
+
+/* Confirmar o desdecirse: la CTA de siempre y, debajo, la salida sin peso.
+   Aquí la CTA no flota (vive dentro de la tarjeta), así que va sin sombra. */
+.hoja__acciones {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 18px;
+}
+.hoja__acciones .cta { box-shadow: none; }
+.boton-fantasma {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  background: none;
+  width: 100%;
+  height: 48px;
+  border-radius: 22px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gris);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .15s ease, transform .3s var(--muelle);
+}
+.boton-fantasma:hover { color: var(--seccion); }
+.boton-fantasma:active { transform: scale(.985); transition-duration: .08s; }
+
+/* Fila de acción dentro de una hoja (hacer foto). */
+.accion-foto {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  text-align: left;
+  gap: 14px;
+  background: var(--campo);
+  border: 1px solid var(--borde-campo);
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: 15.5px;
+  font-weight: 600;
+  color: var(--tinta);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .3s var(--muelle);
+}
+.accion-foto:active { transform: scale(.985); transition-duration: .08s; }
+.accion-foto span { display: flex; }
+
+.campo-emoji {
+  display: flex;
+  align-items: center;
+  background: var(--campo);
+  border: 1px solid var(--borde-campo);
+  border-radius: 16px;
+  height: 52px;
+  padding: 0 14px;
+}
+.campo-emoji input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 22px;
+  caret-color: var(--carbon);
+}
+.campo-emoji input::placeholder { font-size: 15px; color: var(--placeholder); font-weight: 500; }
+
+.rejilla-rapida {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+}
+.rejilla-rapida button {
+  -webkit-appearance: none;
+  appearance: none;
+  aspect-ratio: 1;
+  min-width: 0;
+  background: var(--tesela);
+  border: 1px solid var(--borde-tesela);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .3s var(--muelle-fuerte);
+}
+.rejilla-rapida button:active { transform: scale(.88); transition-duration: .08s; }
+
+/* ------------------------------------------------ 17. Utilidades ---------- */
+.oculto { display: none !important; }
+.pulsable { cursor: pointer; }
+
+/* ------------------------------------------- 18. Menos movimiento --------- */
+@media (prefers-reduced-motion: reduce) {
+  .icono-btn, .caja, .caja-nueva, .fila, .chip, .chip-caja, .crear, .accion,
+  .accion-foto, .hoja__caja, .btn-cuadrado, .stepper button, .cta, .fab,
+  .toast, .campo, .buscador, .buscador span, .panel, .pestanas__pastilla,
+  .pestanas__tab, .emoji-nombre, .rejilla-rapida button, .boton-fantasma {
+    transition: none;
+  }
+  .cifra--pop, .globo--pop, .fila--flash { animation: none; }
+  .cta__giro { animation: none; border-top-color: rgba(255, 255, 255, .6); }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none !important; }
+}
+
+/* ==========================================================================
+   19. Escritorio: el mismo sistema, respirando a 960px.
+   Solo CSS: no hay una segunda interfaz ni un segundo árbol de vistas.
+   ========================================================================== */
+@media (min-width: 900px) {
+  /* --- Home: franja única con pestañas + buscador + añadir --------------- */
+  .vista--home { max-width: 960px; padding: 44px 40px 80px; }
+  .vista--home .cabecera--home { align-items: center; gap: 20px; }
+  .franja {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 -40px;
+    padding: 8px 40px 12px;
+  }
+  /* En escritorio las pestañas tienen su ancho fijo y el conmutador va a su
+     lado; los controles de escritorio (buscador y "Añadir ítem") empujan a la
+     derecha con su `margin-left: auto`. */
+  .franja__fila { flex: none; }
+  .franja .pestanas { flex: none; width: 360px; max-width: 360px; }
+  .escritorio-controles {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+  }
+  .buscador--mini { height: 50px; width: 260px; border-radius: 16px; }
+  .buscador--mini input { font-size: 15px; }
+  .boton-anadir-desktop {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--carbon);
+    color: #fff;
+    border-radius: 16px;
+    /* 50 y no 46: es lo que miden las pestañas de al lado (44 de pastilla + 2
+       de aire arriba y abajo + el filete). Las tres piezas de la franja tienen
+       que cerrar en la misma línea. */
+    height: 50px;
+    padding: 0 18px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform .3s var(--muelle-fuerte), background-color .15s ease;
+  }
+  .boton-anadir-desktop:hover { background: var(--carbon-claro); }
+  .boton-anadir-desktop:active { transform: scale(.96); transition-duration: .08s; }
+
+  .vista--home .reticula,
+  .vista--home .rejilla { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-top: 12px; }
+  .vista--caja .rejilla { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .pieza:hover { border-color: #E2E2E2; }
+  .vista--home .mosaico i { font-size: 40px; }
+  /* Hover = solo el filete un punto más oscuro. Sin elevar nada. */
+  .caja { transition: transform .3s var(--muelle), border-color .15s ease; }
+  .caja:hover { border-color: #E2E2E2; }
+  .caja-nueva:hover { border-color: #C9C9CC; color: var(--seccion); }
+
+  /* Inventario: fila de una línea, chips a la derecha. */
+  .panel > .lista { margin-top: 12px; }
+  .fila--inv .fila__cajas { max-width: 60%; flex-wrap: nowrap; }
+  .fila:hover { border-color: #E2E2E2; }
+  .chip-caja:hover { border-color: #C9C9CC; }
+
+  /* Abajo ya no flota nada: los controles viven en la cabecera. */
+  .vista--home .flotante,
+  .vista--home .velo-inferior { display: none; }
+
+  /* --- Caja e ítem: la misma columna, un poco más ancha ----------------- */
+  .vista--caja, .vista--item { max-width: 640px; padding-top: 44px; }
+  .vista--caja .flotante, .vista--item .flotante {
+    left: max(20px, calc(50vw - 300px));
+    right: max(20px, calc(50vw - 300px));
+  }
+
+  /* --- Pasos de proceso: modal centrada sobre la pantalla atenuada ------ */
+  /* El velo lo pinta la capa (#capa-proceso), no el body: debajo de la
+     modal está la pantalla de la que vienes, montada y viva. */
+  #capa-proceso { background: rgba(23, 24, 26, .20); }
+  .vista--modal {
+    max-width: 520px;
+    min-height: 0;
+    margin: 56px auto;
+    padding: 24px 26px 26px;
+    background: var(--blanco);
+    border: 1px solid var(--borde);
+    border-radius: 24px;
+    box-shadow: var(--sombra-modal);
+  }
+  /* La CTA deja de flotar: vive dentro de la tarjeta. */
+  /* Dentro de la tarjeta blanca de un proceso, la barra es blanca y se estira
+     hasta los bordes de la tarjeta, no de la columna. */
+  .vista--modal .barra {
+    margin: 0 -26px;
+    padding: 24px 26px 12px;
+    background: var(--blanco);
+    border-radius: 24px 24px 0 0;
+  }
+  .vista--modal .barra::after {
+    background: linear-gradient(to bottom, var(--blanco), rgba(255, 255, 255, 0));
+  }
+  .vista--modal .velo-inferior { display: none; }
+  .vista--modal .flotante {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    margin-top: 26px;
+  }
+  dialog.hoja { margin: auto; }
+  /* La puerta no lleva regla de escritorio: la columna de 430px centrada es
+     exactamente lo que queremos también ahí. */
+}
+
+/* ==========================================================================
+   20. Puerta de acceso y pie de sesión
+   Lo único que existe cuando hay Supabase. Sin tokens nuevos: la columna es
+   la de siempre y las piezas de dentro son .campo, .cta y .pista.
+   ========================================================================== */
+.acceso {
+  min-height: calc(100vh - 164px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+.acceso__marca {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  color: var(--tinta);
+  margin-bottom: 10px;
+  user-select: none;
+}
+.acceso__sub {
+  color: var(--gris);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.45;
+  margin-bottom: 22px;
+}
+.acceso .campo { margin-bottom: 12px; }
+.acceso .campo input { text-align: center; }
+/* Aquí la CTA no flota: vive en la columna, debajo del campo. */
+.acceso .cta { box-shadow: none; }
+.acceso .pista { text-align: center; margin-top: 12px; }
+.acceso__otro {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  background: none;
+  margin-top: 18px;
+  padding: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gris);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* El único sitio para salir: al pie de la home, sin peso visual. */
+.pie-sesion { text-align: center; margin-top: 28px; }
+.pie-sesion[hidden] { display: none; }
+.pie-sesion button {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gris);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .15s ease;
+}
+.pie-sesion button:hover { color: var(--seccion); }
+.pie-sesion button:disabled { opacity: .5; cursor: default; }
+
+/* ==========================================================================
+   21. Modo búsqueda (móvil)
+   Buscar es una pantalla, no un campo suelto: al enfocar el buscador de la
+   barra flotante, la barra VIAJA hasta arriba (el salto lo anima home.js con
+   FLIP, aquí sólo vive el estado final) y debajo queda únicamente la lista
+   del inventario, que se filtra según escribes. Cabecera, pestañas y la
+   retícula de cajas se apartan: en ese momento no son la tarea.
+
+   Sólo existe en móvil — en escritorio el buscador ya vive arriba, en la
+   franja, y la barra flotante ni siquiera se pinta.
+   ========================================================================== */
+/* Debajo del buscador, el mismo hueco que hay entre fichas (10 px): la barra
+   ocupa 14 + 56, así que la lista empieza a 80. */
+body.buscando .vista--home {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 80px);
+  padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+}
+body.buscando .panel > .lista { margin-top: 0; }
+body.buscando .cabecera--home,
+body.buscando .franja,
+body.buscando #panel-cajas { display: none; }
+
+/* La barra deja de flotar abajo para posarse arriba del todo. El desfase lo
+   pone home.js desde `visualViewport`: sin él, con el teclado de iOS abierto
+   la barra se queda por encima de lo que se ve. */
+body.buscando .flotante {
+  top: calc(env(safe-area-inset-top, 0px) + 14px + var(--desfase-teclado, 0px));
+  bottom: auto;
+}
+body.buscando #fab { display: none; }
+
+/* El velo se da la vuelta: ahora el contenido se disuelve al SUBIR. */
+body.buscando .velo-inferior {
+  top: var(--desfase-teclado, 0px);
+  bottom: auto;
+  height: calc(env(safe-area-inset-top, 0px) + 104px);
+  background: linear-gradient(to bottom,
+    #FAFAFA 46%, rgba(250, 250, 250, .85) 72%, rgba(250, 250, 250, 0));
+}
+
+/* Salir de la búsqueda: mismo cuerpo que el FAB, sin su peso — el "+" es la
+   acción principal de la home y aquí no toca competir con él. */
+.cerrar-busqueda {
+  flex: none;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 22px;
+  border: 1px solid var(--borde-fuerte);
+  background: var(--blanco);
+  color: var(--tinta);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--sombra-campo);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .34s var(--muelle-fuerte), background-color .15s ease;
+}
+.cerrar-busqueda[hidden] { display: none; }
+.cerrar-busqueda:active {
+  transform: scale(.9);
+  background: var(--campo);
+  transition-duration: .09s;
+}

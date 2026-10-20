@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prueba Crear · med kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --fondo:   #FAFAFA;
+    --blanco:  #FFFFFF;
+    --tinta:   #17181A;
+    --carbon:  #232936;
+    --gris:    #8E8E93;
+    --borde:   #EDEDED;
+    --campo:   #F0F0F1;
+    --fuente: "Google Sans Flex", system-ui, -apple-system, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; }
+
+  @view-transition { navigation: auto; }
+  ::view-transition-group(boton-anadir) {
+    animation-duration: .42s;
+    animation-timing-function: cubic-bezier(.32, 1.26, .4, 1);
+  }
+  ::view-transition-image-pair(boton-anadir) {
+    border-radius: 22px;
+    overflow: clip;
+    background: #232936;
+    isolation: auto;
+  }
+  ::view-transition-old(boton-anadir),
+  ::view-transition-new(boton-anadir) {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    mix-blend-mode: normal;
+  }
+  ::view-transition-old(boton-anadir) { animation: vt-fuera .1s ease both; }
+  ::view-transition-new(boton-anadir) { animation: vt-dentro .2s ease .15s both; }
+  @keyframes vt-fuera { to { opacity: 0; } }
+  @keyframes vt-dentro { from { opacity: 0; } to { opacity: 1; } }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; }
+  @media (prefers-reduced-motion: reduce) {
+    @view-transition { navigation: none; }
+  }
+
+  body {
+    background: var(--fondo);
+    color: var(--tinta);
+    font-family: var(--fuente);
+    -webkit-font-smoothing: antialiased;
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding: 24px 20px 140px;
+  }
+
+  .barra {
+    display: flex;
+    align-items: center;
+    padding: 2px 0 16px;
+  }
+  .icono-btn {
+    color: var(--tinta);
+    display: flex;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .3s cubic-bezier(.22, .9, .28, 1.2), opacity .12s ease;
+    text-decoration: none;
+  }
+  .icono-btn:active { transform: scale(.85); opacity: .6; transition-duration: .08s; }
+
+  .cabecera { padding: 2px 2px 16px; }
+  .cabecera h1 { font-size: 25px; font-weight: 700; }
+  .cabecera .sub {
+    color: var(--gris);
+    font-size: 14.5px;
+    font-weight: 500;
+    margin-top: 2px;
+  }
+  .cabecera .sub .num { font-family: var(--mono); font-size: 13px; }
+
+  .seccion {
+    color: #6E6E73;
+    font-size: 15px;
+    font-weight: 600;
+    margin: 20px 2px 10px;
+  }
+
+  /* Campo de texto del sistema */
+  .campo {
+    display: flex;
+    align-items: center;
+    background: var(--campo);
+    border: 1px solid #E5E5E6;
+    border-radius: 18px;
+    height: 52px;
+    padding: 0 16px;
+    transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
+  }
+  .campo input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    outline: none;
+    font-family: inherit;
+    font-size: 16.5px;
+    font-weight: 500;
+    color: var(--tinta);
+    caret-color: var(--carbon);
+  }
+  .campo:focus-within {
+    background: var(--blanco);
+    border-color: #D2D2D5;
+    box-shadow: 0 2px 10px rgba(23, 24, 26, .06);
+  }
+
+  /* Emoji delante del nombre, tocable */
+  .emoji-nombre {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: none;
+    width: 38px;
+    height: 38px;
+    margin-right: 10px;
+    border-radius: 12px;
+    background: var(--blanco);
+    border: 1px solid #E6E6E7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .3s cubic-bezier(.22, .9, .28, 1.2);
+  }
+  .emoji-nombre:active { transform: scale(.88); transition-duration: .08s; }
+
+  /* Fila de acción: hacer foto (aparte) */
+  .accion-fila {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    text-align: left;
+    gap: 14px;
+    background: var(--blanco);
+    border: 1px solid var(--borde);
+    border-radius: 20px;
+    padding: 10px 12px;
+    font-family: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .3s cubic-bezier(.22, .9, .28, 1.15);
+  }
+  .accion-fila:active { transform: scale(.985); transition-duration: .08s; }
+  .accion-fila .tesela {
+    flex: none;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: var(--campo);
+    border: 1px solid #E6E6E7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--tinta);
+  }
+  .accion-fila .nombre { font-size: 16px; font-weight: 600; color: #1B1B1D; display: block; }
+  .accion-fila .tipo { color: var(--gris); font-size: 13.5px; font-weight: 500; margin-top: 1px; display: block; }
+
+  dialog.hoja {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    width: min(390px, calc(100vw - 40px));
+    margin: auto auto 24px;
+  }
+  dialog.hoja::backdrop { background: rgba(23, 24, 26, .28); }
+  .hoja__cuerpo {
+    background: var(--blanco);
+    border: 1px solid var(--borde);
+    border-radius: 24px;
+    padding: 16px;
+    box-shadow: 0 18px 44px rgba(23, 24, 26, .18);
+  }
+  .hoja__titulo { font-size: 17px; font-weight: 700; margin: 2px 2px 12px; }
+  .accion-foto {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    text-align: left;
+    gap: 14px;
+    background: var(--campo);
+    border: 1px solid #E5E5E6;
+    border-radius: 16px;
+    padding: 12px 14px;
+    font-family: inherit;
+    font-size: 15.5px;
+    font-weight: 600;
+    color: var(--tinta);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .3s cubic-bezier(.22, .9, .28, 1.15);
+  }
+  .accion-foto:active { transform: scale(.985); transition-duration: .08s; }
+  .accion-foto span { display: flex; }
+  .hoja__separador { color: var(--gris); font-size: 13px; font-weight: 600; margin: 14px 2px 8px; }
+  .campo-emoji {
+    display: flex;
+    align-items: center;
+    background: var(--campo);
+    border: 1px solid #E5E5E6;
+    border-radius: 16px;
+    height: 52px;
+    padding: 0 14px;
+  }
+  .campo-emoji input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    outline: none;
+    font-family: inherit;
+    font-size: 22px;
+    caret-color: var(--carbon);
+  }
+  .campo-emoji input::placeholder { font-size: 15px; color: #8E9095; font-weight: 500; }
+  .rejilla-rapida {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .rejilla-rapida button {
+    -webkit-appearance: none;
+    appearance: none;
+    aspect-ratio: 1;
+    min-width: 0;
+    background: #FAFAFB;
+    border: 1px solid #E6E6E7;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .3s cubic-bezier(.22, .9, .28, 1.2);
+  }
+  .rejilla-rapida button:active { transform: scale(.88); transition-duration: .08s; }
+
+  /* Tipo: el segmented del sistema */
+  .pestanas {
+    position: relative;
+    display: flex;
+    background: #F2F2F3;
+    border: 1px solid rgba(17, 17, 17, .03);
+    border-radius: 17px;
+    padding: 2px;
+  }
+  .pestanas__pastilla {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    left: 2px;
+    width: calc(50% - 2px);
+    border-radius: 15px;
+    background: var(--blanco);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+    transition: transform .28s cubic-bezier(.3, .86, .3, 1.02);
+    will-change: transform;
+  }
+  .pestanas[data-activa="1"] .pestanas__pastilla { transform: translateX(100%); }
+  .pestanas__tab {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 0;
+    background: transparent;
+    position: relative;
+    z-index: 1;
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+    border-radius: 15px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    color: #85858A;
+    cursor: pointer;
+    transition: color .18s ease, font-weight .18s ease, opacity .12s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pestanas__tab[aria-selected="true"] { color: #0E0E10; font-weight: 600; }
+  .pestanas__tab:active:not([aria-selected="true"]) { opacity: .45; }
+  .pista {
+    color: var(--gris);
+    font-size: 13px;
+    font-weight: 500;
+    margin: 8px 2px 0;
+  }
+
+  /* ---------- Flotante: CTA ---------- */
+  .velo-inferior {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: 150px;
+    background: linear-gradient(to top, #FAFAFA 38%, rgba(250, 250, 250, .85) 62%, rgba(250, 250, 250, 0));
+    pointer-events: none;
+    z-index: 5;
+  }
+  .flotante {
+    position: fixed;
+    left: max(20px, calc(50vw - 195px));
+    right: max(20px, calc(50vw - 195px));
+    bottom: 24px;
+    z-index: 10;
+  }
+  .cta {
+    width: 100%;
+    view-transition-name: boton-anadir;
+    -webkit-appearance: none;
+    appearance: none;
+    border: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: var(--carbon);
+    color: #fff;
+    border-radius: 22px;
+    height: 56px;
+    font-family: inherit;
+    font-size: 16.5px;
+    font-weight: 600;
+    box-shadow: 0 6px 16px rgba(23, 24, 26, .16);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .34s cubic-bezier(.22, .9, .28, 1.2), box-shadow .2s ease;
+  }
+  .cta:active {
+    transform: scale(.97);
+    box-shadow: 0 3px 8px rgba(23, 24, 26, .18);
+    transition-duration: .09s;
+  }
+  .cta span { display: flex; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .icono-btn, .campo, .tesela-op, .pestanas__pastilla, .pestanas__tab, .cta { transition: none; }
+  }
+  /* ==========================================================
+     Escritorio: esto es un paso de proceso, no una pantalla.
+     Se presenta como modal sobre la pantalla anterior atenuada.
+     ========================================================== */
+  @media (min-width: 900px) {
+    html { background: var(--fondo); }
+    html::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: rgba(23, 24, 26, .20);
+      z-index: 0;
+    }
+    body {
+      position: relative;
+      z-index: 1;
+      max-width: 520px;
+      min-height: 0;
+      margin: 56px auto;
+      padding: 24px 26px 26px;
+      background: var(--blanco);
+      border: 1px solid var(--borde);
+      border-radius: 24px;
+      box-shadow: 0 24px 60px rgba(23, 24, 26, .18);
+    }
+    /* La CTA deja de flotar: vive dentro de la tarjeta */
+    .velo-inferior { display: none; }
+    .flotante {
+      position: static;
+      left: auto;
+      right: auto;
+      bottom: auto;
+      margin-top: 26px;
+    }
+    dialog.hoja { margin: auto; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="barra">
+  <a class="icono-btn" href="prueba-medkit-anadir.html" aria-label="Volver">
+    <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
+  </a>
+</nav>
+
+<header class="cabecera">
+  <h1>Nuevo ítem</h1>
+  <div class="sub">irá a <span class="num">CAJA 01</span> · Baño repuestos</div>
+</header>
+
+<div class="seccion">Nombre</div>
+<div class="campo" style="padding-left: 8px;">
+  <button type="button" class="emoji-nombre" id="emoji-btn" aria-label="Cambiar el emoji">
+    <span id="preview-emoji">🏷️</span>
+  </button>
+  <input type="text" id="nombre" value="Martillo" aria-label="Nombre del ítem" autocomplete="off">
+</div>
+
+<div class="seccion">Foto</div>
+<button type="button" class="accion-fila" id="hacer-foto-fila">
+  <span class="tesela" aria-hidden="true">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2c0-1 .8-1.7 1.7-1.7h1.4c.6 0 1.1-.3 1.4-.8l.6-.9c.3-.5.9-.8 1.4-.8h3c.6 0 1.1.3 1.4.8l.6.9c.3.5.9.8 1.4.8h1.4c1 0 1.7.8 1.7 1.7v9c0 1-.8 1.7-1.7 1.7H5.7c-1 0-1.7-.8-1.7-1.7z"/><circle cx="12" cy="12.5" r="3.4"/></svg>
+  </span>
+  <span style="flex: 1 1 auto; min-width: 0;">
+    <span class="nombre">Hacer una foto</span>
+    <span class="tipo" id="foto-estado">Opcional · sustituye al emoji</span>
+  </span>
+</button>
+
+<dialog class="hoja" id="hoja">
+  <div class="hoja__cuerpo">
+    <div class="hoja__titulo">Emoji del ítem</div>
+    <div class="hoja__separador" style="margin-top: 0;">Cualquiera vale — escríbelo o elige uno</div>
+    <label class="campo-emoji">
+      <input type="text" id="emoji-libre" placeholder="Escribe aquí un emoji…" autocomplete="off">
+    </label>
+    <div class="rejilla-rapida" id="rejilla-rapida">
+      <button type="button">🔨</button><button type="button">🧰</button><button type="button">🪛</button>
+      <button type="button">🔧</button><button type="button">🪚</button><button type="button">⚙️</button>
+      <button type="button">🧲</button><button type="button">🪜</button><button type="button">🧽</button>
+      <button type="button">🔋</button><button type="button">💡</button><button type="button">🕯️</button>
+    </div>
+  </div>
+</dialog>
+
+<div class="seccion">Tipo</div>
+<div class="pestanas" role="tablist" aria-label="Tipo de ítem" data-activa="1" id="tipo">
+  <span class="pestanas__pastilla" aria-hidden="true"></span>
+  <button type="button" class="pestanas__tab" role="tab" aria-selected="false">Suministro</button>
+  <button type="button" class="pestanas__tab" role="tab" aria-selected="true">Único</button>
+</div>
+<div class="pista" id="pista-tipo">Único: solo hay uno, está en una caja o no está.</div>
+
+<div class="velo-inferior" aria-hidden="true"></div>
+
+<div class="flotante">
+  <button type="button" class="cta" onclick="location.href='prueba-medkit-caja.html'">
+    <span aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 4.5v15M4.5 12h15"/></svg>
+    </span>
+    Añadir a la caja
+  </button>
+</div>
+
+<script>
+(function () {
+  /* Nombre precargado desde el buscador de añadir (?nombre=) */
+  const nombre = new URLSearchParams(location.search).get('nombre');
+  if (nombre) {
+    const campo = document.getElementById('nombre');
+    campo.value = nombre.charAt(0).toUpperCase() + nombre.slice(1);
+  }
+
+  /* Imagen: hoja de personalización */
+  const hoja = document.getElementById('hoja');
+  const previewEmoji = document.getElementById('preview-emoji');
+  document.getElementById('emoji-btn').addEventListener('click', () => hoja.showModal());
+  hoja.addEventListener('click', e => { if (e.target === hoja) hoja.close(); });
+  document.getElementById('hacer-foto-fila').addEventListener('click', () => {
+    document.getElementById('foto-estado').textContent = 'Foto guardada (maqueta) · sustituye al emoji';
+  });
+  const emojiLibre = document.getElementById('emoji-libre');
+  emojiLibre.addEventListener('input', () => {
+    const v = [...emojiLibre.value.trim()];
+    if (!v.length) return;
+    previewEmoji.textContent = v.slice(0, 2).join('').trim();
+    emojiLibre.value = '';
+    hoja.close();
+  });
+  document.getElementById('rejilla-rapida').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    previewEmoji.textContent = b.textContent;
+    hoja.close();
+  });
+
+  /* Tipo: segmented del sistema */
+  const tipo = document.getElementById('tipo');
+  const tabs = [...tipo.querySelectorAll('.pestanas__tab')];
+  const pista = document.getElementById('pista-tipo');
+  tabs.forEach((t, i) => t.addEventListener('click', () => {
+    tipo.dataset.activa = i;
+    tabs.forEach((x, j) => x.setAttribute('aria-selected', j === i ? 'true' : 'false'));
+    pista.textContent = i === 0
+      ? 'Suministro: se compra más de una vez, cuenta por unidades.'
+      : 'Único: solo hay uno, está en una caja o no está.';
+  }));
+})();
+</script>
+
+</body>
+</html>

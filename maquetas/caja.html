@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Caja</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="ui.js"></script>
+</head>
+<body data-seccion="cajas" data-pie="cta">
+
+<header class="cabecera">
+  <a class="cabecera__accion" href="cajas.html" id="volver" aria-label="Volver"></a>
+  <button type="button" class="cabecera__accion" id="ajustes" aria-label="Ajustes de la caja"></button>
+</header>
+
+<section class="hero">
+  <div id="pila"></div>
+  <h1 id="nombre">Repuestos varios</h1>
+  <div class="meta" id="meta"></div>
+</section>
+
+<main class="objetos">
+  <ul class="lista" id="lista"></ul>
+
+  <div class="vacio oculto" id="vacio">
+    <span class="vacio__emoji">📦</span>
+    <strong>Esta caja está vacía</strong>
+    Añade lo primero que le metas.
+  </div>
+</main>
+
+<div class="barra-inferior">
+  <a class="cta" id="cta-anadir" href="anadir.html">
+    <span id="cta-icono" aria-hidden="true"></span>
+    Añadir objeto
+  </a>
+</div>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  const caja = Datos.caja(UI.cajaActual());
+  const lista = document.getElementById('lista');
+  const vacio = document.getElementById('vacio');
+
+  document.getElementById('volver').innerHTML = UI.icono('atras', 24);
+  document.getElementById('ajustes').innerHTML = UI.icono('ajustes', 23);
+  document.getElementById('cta-icono').innerHTML = UI.icono('anadir', 20);
+
+  function pintarCabecera() {
+    document.getElementById('pila').innerHTML = UI.pila(caja.num, true);
+    document.getElementById('nombre').textContent = caja.nombre;
+    document.getElementById('meta').textContent =
+      caja.ubicacion + ' · ' + UI.plural(Datos.numObjetos(caja.num), 'objeto', 'objetos');
+    document.title = 'CAJA ' + caja.num;
+    document.getElementById('cta-anadir').href = 'anadir.html?caja=' + encodeURIComponent(caja.num);
+  }
+
+  function filaHTML(objeto, cantidad) {
+    const control = objeto.suministro
+      ? `<div class="stepper">
+           <button type="button" data-accion="menos" aria-label="Quitar una unidad de ${UI.esc(objeto.nombre)}">${UI.icono('quitar', 18)}</button>
+           <output aria-label="Cantidad de ${UI.esc(objeto.nombre)}">${cantidad}</output>
+           <button type="button" data-accion="mas" aria-label="Añadir una unidad de ${UI.esc(objeto.nombre)}">${UI.icono('anadir', 18)}</button>
+         </div>`
+      : `<button type="button" class="btn-quitar" data-accion="quitar">Quitar</button>`;
+
+    return `<li class="fila" data-id="${UI.esc(objeto.id)}">
+      <span class="foto" aria-hidden="true">${objeto.emoji}</span>
+      <div class="fila__texto">
+        <div class="fila__nombre">${UI.esc(objeto.nombre)}</div>
+        <div class="fila__meta">${objeto.suministro ? 'Suministro' : 'Único'}</div>
+      </div>
+      ${control}
+    </li>`;
+  }
+
+  function pintar() {
+    const contenido = Datos.contenido(caja.num);
+    lista.innerHTML = contenido.map(f => filaHTML(f.objeto, f.cantidad)).join('');
+    vacio.classList.toggle('oculto', contenido.length > 0);
+    document.getElementById('meta').textContent =
+      caja.ubicacion + ' · ' + UI.plural(contenido.length, 'objeto', 'objetos');
+  }
+
+  function quitarFila(li, mensaje) {
+    li.classList.add('fila--saliendo');
+    setTimeout(() => { pintar(); UI.toast(mensaje); }, 200);
+  }
+
+  lista.addEventListener('click', function (e) {
+    const boton = e.target.closest('[data-accion]');
+    if (!boton) return;
+    const li = boton.closest('.fila');
+    const objeto = Datos.objeto(li.dataset.id);
+    const accion = boton.dataset.accion;
+
+    if (accion === 'quitar') {
+      Datos.quitar(caja.num, objeto.id);
+      quitarFila(li, objeto.nombre + ' fuera de la CAJA ' + caja.num);
+      return;
+    }
+
+    const output = li.querySelector('output');
+    const actual = parseInt(output.textContent, 10);
+    const nueva = accion === 'mas' ? actual + 1 : actual - 1;
+
+    if (nueva <= 0) {
+      Datos.quitar(caja.num, objeto.id);
+      quitarFila(li, objeto.nombre + ' fuera de la CAJA ' + caja.num);
+      return;
+    }
+
+    Datos.fijar(caja.num, objeto.id, nueva);
+    output.textContent = nueva;
+    li.classList.remove('fila--pulso');
+    void li.offsetWidth;
+    li.classList.add('fila--pulso');
+  });
+
+  /* El engranaje de la cabecera es la única entrada a los ajustes de la caja */
+  document.getElementById('ajustes').addEventListener('click', function () {
+    UI.abrirAjustes(caja, function (c) {
+      history.replaceState(null, '', 'caja.html?caja=' + encodeURIComponent(c.num));
+      pintarCabecera();
+      pintar();
+    });
+  });
+
+  pintarCabecera();
+  pintar();
+})();
+</script>
+</body>
+</html>

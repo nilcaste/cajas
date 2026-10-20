@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Cajas · sitios (armario negro)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: #F1F1F3;
+  font-family: "Google Sans Flex", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.intro { padding: 34px 30px 4px; max-width: 720px; }
+.intro h1 { font-size: 25px; font-weight: 700; color: #17181A; margin: 0 0 8px; }
+.intro p { font-size: 15px; line-height: 1.5; font-weight: 500; color: #55555A; margin: 0; }
+.tablero { display: flex; gap: 26px; align-items: flex-start; padding: 26px 30px 70px; overflow-x: auto; }
+.pieza { flex: none; width: 390px; }
+.pieza h2 {
+  font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: #8E8E93; margin: 0 0 10px 4px;
+}
+.marco {
+  width: 390px; height: 780px; border-radius: 38px; overflow: hidden; background: #FAFAFA;
+  box-shadow: 0 12px 44px rgba(23,24,26,.14), 0 0 0 1px rgba(23,24,26,.07);
+}
+.marco iframe { width: 390px; height: 780px; border: 0; display: block; }
+.pieza p.nota {
+  font-size: 13.5px; line-height: 1.5; font-weight: 500; color: #6E6E73; margin: 14px 4px 0;
+}
+.pieza p.nota b { color: #17181A; font-weight: 600; }
+@media (max-width: 900px) {
+  .intro { padding: 26px 20px 0; }
+  .tablero { flex-direction: column; padding: 20px; gap: 34px; }
+  .pieza, .marco, .marco iframe { width: 100%; max-width: 390px; }
+}
+</style>
+</head>
+<body>
+<div class="intro">
+  <h1>El armario negro</h1>
+  <p>Un sitio no es un nivel de navegación: es un rótulo. Las cajas del armario se ven de un vistazo, y lo que está dentro de él sin caja es una tarjeta más — sin número, que es lo único que la distingue de una caja.</p>
+</div>
+<div class="tablero">
+<div class="pieza">
+  <h2>1 · Home · Cajas</h2>
+  <div class="marco"><iframe src="sitios-pantalla.html#1" title="1 · Home · Cajas" loading="eager"></iframe></div>
+  <p class="nota">El armario es un <b>rótulo</b>, no una pantalla: sus cajas se ven de un vistazo y se entra en una de un toque, igual que ahora. «Sin clasificar» es una tarjeta más — lo único que le falta es el número.</p>
+</div>
+<div class="pieza">
+  <h2>2 · «Sin clasificar», abierto</h2>
+  <div class="marco"><iframe src="sitios-pantalla.html#2" title="2 · «Sin clasificar», abierto" loading="eager"></iframe></div>
+  <p class="nota">Por dentro es una caja idéntica: buscar, sumar, restar, sacar. No hay pantalla intermedia del armario, y por eso no hay peaje. Puede llevar su propio QR pegado en la puerta.</p>
+</div>
+<div class="pieza">
+  <h2>3 · Inventario</h2>
+  <div class="marco"><iframe src="sitios-pantalla.html#3" title="3 · Inventario" loading="eager"></iframe></div>
+  <p class="nota">La respuesta a «dónde está» no cambia de forma: el chip dice <b>01</b> si está en una caja y <b>Armario</b> si está suelto. Mismo gesto, mismo sitio, un toque.</p>
+</div>
+<div class="pieza">
+  <h2>4 · Nueva caja</h2>
+  <div class="marco"><iframe src="sitios-pantalla.html#4" title="4 · Nueva caja" loading="eager"></iframe></div>
+  <p class="nota">Al crear no se pregunta «¿caja, armario o cajonera?» — se pregunta <b>dónde está</b>, que es el campo que la app ya tiene hoy. Escribir «Armario negro» ya lo agrupa.</p>
+</div>
+</div>
+</body>
+</html>

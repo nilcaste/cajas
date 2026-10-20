@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prueba Home · med kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --fondo:    #FAFAFA;
+    --blanco:   #FFFFFF;
+    --tesela:   #F7F7F9;
+    --hairline: #ECECEE;
+    --campo:    #ECECEE;
+    --tinta:    #17181A;
+    --gris:     #9A9CA0;
+    --sombra-tarjeta: 0 2px 10px rgba(23, 24, 26, .05);
+    --sombra-flotante: 0 10px 28px rgba(23, 24, 26, .14);
+    --sombra-fab: 0 12px 26px rgba(23, 24, 26, .30);
+    --fuente: "Google Sans Flex", system-ui, -apple-system, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; }
+
+  /* Transición entre pantallas: el + se convierte en la CTA de la caja */
+  @view-transition { navigation: auto; }
+  ::view-transition-group(boton-anadir) {
+    animation-duration: .42s;
+    animation-timing-function: cubic-bezier(.32, 1.26, .4, 1);
+  }
+  /* La forma (fondo carbón + radio) vive en el contenedor: es lo único que se estira */
+  ::view-transition-image-pair(boton-anadir) {
+    border-radius: 22px;
+    overflow: clip;
+    background: #232936;
+    isolation: auto;
+  }
+  /* Los contenidos no se deforman: el viejo se va rápido, el nuevo entra al final */
+  ::view-transition-old(boton-anadir),
+  ::view-transition-new(boton-anadir) {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    mix-blend-mode: normal;
+  }
+  ::view-transition-old(boton-anadir) { animation: vt-fuera .1s ease both; }
+  ::view-transition-new(boton-anadir) { animation: vt-dentro .2s ease .15s both; }
+  @keyframes vt-fuera { to { opacity: 0; } }
+  @keyframes vt-dentro { from { opacity: 0; } to { opacity: 1; } }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; }
+  @media (prefers-reduced-motion: reduce) {
+    @view-transition { navigation: none; }
+  }
+
+  body {
+    background: var(--fondo);
+    color: var(--tinta);
+    font-family: var(--fuente);
+    -webkit-font-smoothing: antialiased;
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding: 24px 20px 140px;
+  }
+
+  /* ---------- Cabecera: título + añadir caja ---------- */
+  .cabecera {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 4px 2px 18px;
+  }
+  .cabecera h1 {
+    font-size: 25px;
+    font-weight: 700;
+  }
+  .cabecera .sub {
+    color: var(--gris);
+    font-size: 14.5px;
+    font-weight: 500;
+    margin-top: 2px;
+  }
+  /* ---------- Pestañas (calcadas de la referencia + estados) ---------- */
+  .pestanas {
+    position: relative;
+    display: flex;
+    background: #F2F2F3;
+    border: 1px solid rgba(17, 17, 17, .03);
+    border-radius: 17px;
+    padding: 2px;
+  }
+  /* La pastilla blanca es UNA sola pieza que se desliza */
+  .pestanas__pastilla {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    left: 2px;
+    width: calc(50% - 2px);
+    border-radius: 15px;
+    background: var(--blanco);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+    transition: transform .28s cubic-bezier(.3, .86, .3, 1.02);
+    will-change: transform;
+  }
+  .pestanas[data-activa="1"] .pestanas__pastilla { transform: translateX(100%); }
+  .pestanas__tab {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 0;
+    background: transparent;
+    position: relative;
+    z-index: 1;
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+    border-radius: 15px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    color: #85858A;
+    cursor: pointer;
+    transition: color .18s ease, font-weight .18s ease, opacity .12s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pestanas__tab[aria-selected="true"] {
+    color: #0E0E10;
+    font-weight: 600;
+  }
+  /* Pulsación: se atenúa solo la pestaña no activa que estás tocando */
+  .pestanas__tab:active:not([aria-selected="true"]) { opacity: .45; }
+  .pestanas__tab:focus-visible {
+    outline: 2px solid #232936;
+    outline-offset: -4px;
+  }
+
+  /* ---------- Paneles con entrada suave ---------- */
+  .panel[hidden] { display: none; }
+  .panel--entrando {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  .panel {
+    transition: opacity .22s ease, transform .26s cubic-bezier(.3, .86, .3, 1.02);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pestanas__pastilla, .pestanas__tab, .panel,
+    .caja, .caja-nueva, .fab, .inv-fila { transition: none; }
+  }
+
+  /* Stub del inventario para la demo del cambio de panel */
+  .inv-lista { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+  .inv-fila {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--blanco);
+    border: 1px solid #EDEDED;
+    border-radius: 20px;
+    padding: 12px 14px;
+  }
+  .inv-fila .mini {
+    flex: none;
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
+    background: #FAFAFB;
+    border: 1px solid #E6E6E7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+  }
+  .inv-fila { flex-wrap: wrap; }
+  .inv-fila .inv-texto { flex: 1 1 auto; min-width: 0; }
+  .inv-fila .inv-nombre { font-size: 16px; font-weight: 600; color: #1B1B1D; }
+  .inv-fila .inv-nombre b { font-weight: 700; }
+  .inv-fila .inv-meta { color: #8E8E93; font-size: 13.5px; font-weight: 500; margin-top: 1px; }
+  .inv-fila .inv-cajas {
+    flex-basis: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .chip-caja {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--blanco);
+    border: 1px solid #E6E6E7;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--tinta);
+    text-decoration: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .3s cubic-bezier(.22, .9, .28, 1.2);
+  }
+  .chip-caja:active { transform: scale(.92); transition-duration: .08s; }
+  .chip-caja .x { color: #8E8E93; }
+  .oculto { display: none !important; }
+
+
+  /* ---------- Carpetas de cajas ---------- */
+  .reticula {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px;
+    margin-top: 18px;
+  }
+  .caja {
+    background: var(--blanco);
+    border: 1px solid #EDEDED;
+    border-radius: 24px;
+    padding: 7px 7px 16px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    /* suelta con muelle… */
+    transition: transform .34s cubic-bezier(.22, .9, .28, 1.15);
+  }
+  /* …aprieta rápido */
+  .caja:active {
+    transform: scale(.977);
+    transition-duration: .09s;
+  }
+  .mosaico {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1px;
+    background: #E6E6E7;
+    border: 1px solid #E6E6E7;
+    border-radius: 17px;
+    overflow: hidden;
+  }
+  .mosaico i {
+    aspect-ratio: 1;
+    min-width: 0;
+    background: #FAFAFB;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    line-height: 1;
+    font-style: normal;
+    user-select: none;
+  }
+  .caja__nombre {
+    color: #1B1B1D;
+    font-size: 17.5px;
+    font-weight: 600;
+    line-height: 1.2;
+    margin: 14px 7px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .caja__nombre .num {
+    font-family: var(--mono);
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #8E8E93;
+    letter-spacing: .05em;
+    margin-right: 1px;
+  }
+  .caja__meta {
+    color: #8E8E93;
+    font-size: 14px;
+    font-weight: 500;
+    margin: 4px 7px 0;
+  }
+
+  /* Última celda: crear caja nueva */
+  .caja-nueva {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 150px;
+    padding: 20px 12px;
+    border: 1.5px dashed #D6D6D8;
+    border-radius: 24px;
+    color: #8E8E93;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    transition: transform .34s cubic-bezier(.22, .9, .28, 1.15), border-color .15s ease, color .15s ease;
+  }
+  .caja-nueva:active { transform: scale(.977); transition-duration: .09s; }
+  .caja-nueva span { display: flex; }
+
+  /* Estados vacíos */
+  .vacio { text-align: center; padding: 44px 20px 24px; }
+  .vacio__emoji { font-size: 44px; line-height: 1; display: block; opacity: .38; margin-bottom: 12px; }
+  .vacio__titulo { font-size: 17px; font-weight: 600; color: var(--tinta); }
+  .vacio__sub { color: #8E8E93; font-size: 14.5px; font-weight: 500; margin-top: 3px; }
+
+  /* ---------- Flotante inferior: buscador + añadir ---------- */
+  /* Velo: el contenido se disuelve antes de llegar a la barra */
+  .velo-inferior {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 150px;
+    background: linear-gradient(to top, #FAFAFA 38%, rgba(250, 250, 250, .85) 62%, rgba(250, 250, 250, 0));
+    pointer-events: none;
+    z-index: 5;
+  }
+  .flotante {
+    position: fixed;
+    left: max(20px, calc(50vw - 195px));
+    right: max(20px, calc(50vw - 195px));
+    bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 10;
+  }
+  .buscador {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #F0F0F1;
+    border: 1px solid #E5E5E6;
+    border-radius: 18px;
+    height: 56px;
+    padding: 0 18px;
+    color: #8E9095;
+    cursor: text;
+    transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
+  }
+  .buscador span { display: flex; transition: color .16s ease; }
+  .buscador input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    outline: none;
+    font-family: inherit;
+    font-size: 17px;
+    font-weight: 400;
+    color: #17181A;
+    caret-color: #232936;
+  }
+  .buscador input::placeholder { color: #8E9095; }
+  /* Foco: el campo se enciende a blanco y el borde toma cuerpo */
+  .buscador:focus-within {
+    background: var(--blanco);
+    border-color: #D2D2D5;
+    box-shadow: 0 2px 10px rgba(23, 24, 26, .06);
+  }
+  .buscador:focus-within span { color: #55565A; }
+  @media (prefers-reduced-motion: reduce) {
+    .buscador, .buscador span { transition: none; }
+  }
+  .fab {
+    flex: none;
+    view-transition-name: boton-anadir;
+    width: 56px;
+    height: 56px;
+    border-radius: 22px;
+    background: #232936;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 16px rgba(23, 24, 26, .16);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .34s cubic-bezier(.22, .9, .28, 1.2), box-shadow .2s ease;
+  }
+  .fab:active {
+    transform: scale(.9);
+    box-shadow: 0 3px 8px rgba(23, 24, 26, .18);
+    transition-duration: .09s;
+  }
+  .inv-fila {
+    transition: transform .3s cubic-bezier(.22, .9, .28, 1.15);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .inv-fila:active { transform: scale(.985); transition-duration: .09s; }
+  /* Controles de cabecera: solo escritorio */
+  .escritorio-controles { display: none; }
+
+  /* ==========================================================
+     Escritorio: el mismo sistema, respirando a 960px
+     ========================================================== */
+  @media (min-width: 900px) {
+    body {
+      max-width: 960px;
+      padding: 44px 40px 80px;
+    }
+    .cabecera { align-items: center; gap: 20px; }
+    .franja { display: flex; align-items: center; gap: 12px; }
+    .franja .pestanas { flex: none; width: 360px; }
+    .escritorio-controles {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+    }
+    .buscador--mini { height: 46px; width: 260px; border-radius: 15px; }
+    .buscador--mini input { font-size: 15px; }
+    .boton-anadir-desktop {
+      -webkit-appearance: none;
+      appearance: none;
+      border: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #232936;
+      color: #fff;
+      border-radius: 15px;
+      height: 46px;
+      padding: 0 18px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform .3s cubic-bezier(.22, .9, .28, 1.2), background-color .15s ease;
+    }
+    .boton-anadir-desktop:hover { background: #2E3646; }
+    .boton-anadir-desktop:active { transform: scale(.96); transition-duration: .08s; }
+
+    .pestanas { max-width: 360px; }
+
+    .reticula { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-top: 24px; }
+    .mosaico i { font-size: 40px; }
+    .caja { transition: transform .3s cubic-bezier(.22, .9, .28, 1.15), border-color .15s ease; }
+    /* Hover = solo el filete un punto más oscuro. Sin elevar nada. */
+    .caja:hover { border-color: #E2E2E2; }
+    .caja-nueva:hover { border-color: #C9C9CC; color: #6E6E73; }
+
+    /* Inventario: fila de una línea, chips a la derecha */
+    .inv-lista { margin-top: 24px; }
+    .inv-fila { flex-wrap: nowrap; padding: 12px 16px; transition: border-color .15s ease; }
+    .inv-fila:hover { border-color: #E2E2E2; }
+    .inv-fila .inv-cajas {
+      flex-basis: auto;
+      margin-top: 0;
+      margin-left: auto;
+      flex-wrap: nowrap;
+    }
+    .chip-caja:hover { border-color: #C9C9CC; }
+
+    /* Abajo ya no flota nada: los controles viven en la cabecera */
+    .flotante, .velo-inferior { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="cabecera">
+  <div>
+    <h1>Mi almacén</h1>
+    <div class="sub">67 ítems en 8 cajas</div>
+  </div>
+</header>
+
+<div class="franja">
+<nav class="pestanas" role="tablist" aria-label="Secciones" data-activa="0">
+  <span class="pestanas__pastilla" aria-hidden="true"></span>
+  <button type="button" class="pestanas__tab" role="tab" id="tab-cajas" aria-selected="true" aria-controls="panel-cajas">Cajas</button>
+  <button type="button" class="pestanas__tab" role="tab" id="tab-inventario" aria-selected="false" aria-controls="panel-inventario">Inventario</button>
+</nav>
+  <div class="escritorio-controles">
+    <label class="buscador buscador--mini">
+      <span aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20.2 20.2-3.6-3.6"/></svg>
+      </span>
+      <input type="search" id="donde-desktop" placeholder="Dónde está..." aria-label="Buscar un ítem" autocomplete="off">
+    </label>
+    <button type="button" class="boton-anadir-desktop" onclick="location.href='prueba-medkit-anadir.html?desde=home'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 4.5v15M4.5 12h15"/></svg>
+      Añadir ítem
+    </button>
+  </div>
+</div>
+
+<section class="panel" id="panel-cajas" role="tabpanel" aria-labelledby="tab-cajas">
+<div class="vacio oculto" id="cajas-vacio">
+  <span class="vacio__emoji" aria-hidden="true">📦</span>
+  <div class="vacio__titulo">Sin cajas todavía</div>
+  <div class="vacio__sub">Crea la primera y empieza a guardar</div>
+</div>
+<main class="reticula">
+  <article class="caja">
+    <div class="mosaico" aria-hidden="true"><i>🪥</i><i>🧴</i><i>🧻</i><i>🧼</i></div>
+    <div class="caja__nombre">Baño repuestos</div>
+    <div class="caja__meta">4 ítems</div>
+  </article>
+
+  <article class="caja">
+    <div class="mosaico" aria-hidden="true"><i>🧽</i><i>🗑️</i><i>🧹</i><i></i></div>
+    <div class="caja__nombre">Limpieza</div>
+    <div class="caja__meta">3 ítems</div>
+  </article>
+
+  <article class="caja">
+    <div class="mosaico" aria-hidden="true"><i>🧻</i><i>🧽</i><i>🕯️</i><i></i></div>
+    <div class="caja__nombre">Cocina repuestos</div>
+    <div class="caja__meta">3 ítems</div>
+  </article>
+
+  <article class="caja">
+    <div class="mosaico" aria-hidden="true"><i>🔋</i><i>💡</i><i></i><i></i></div>
+    <div class="caja__nombre">Electricidad</div>
+    <div class="caja__meta">2 ítems</div>
+  </article>
+
+  <article class="caja">
+    <div class="mosaico" aria-hidden="true"><i>🔨</i><i>🪛</i><i></i><i></i></div>
+    <div class="caja__nombre">Herramientas</div>
+    <div class="caja__meta">2 ítems</div>
+  </article>
+
+  <article class="caja">
+    <div class="mosaico" aria-hidden="true"><i>🎾</i><i></i><i></i><i></i></div>
+    <div class="caja__nombre">Deporte</div>
+    <div class="caja__meta">1 ítem</div>
+  </article>
+
+  <article class="caja">
+    <div class="mosaico" aria-hidden="true"><i>🧽</i><i>🔋</i><i>💡</i><i>🕯️</i></div>
+    <div class="caja__nombre">Repuestos varios</div>
+    <div class="caja__meta">6 ítems</div>
+  </article>
+
+  <article class="caja">
+    <div class="mosaico" aria-hidden="true"><i>🧣</i><i>👕</i><i></i><i></i></div>
+    <div class="caja__nombre">Textil e invierno</div>
+    <div class="caja__meta">2 ítems</div>
+  </article>
+
+  <a class="caja-nueva" href="prueba-medkit-nueva.html">
+    <span aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 4.5v15M4.5 12h15"/></svg>
+    </span>
+    Nueva caja
+  </a>
+</main>
+
+</section>
+
+<section class="panel" id="panel-inventario" role="tabpanel" aria-labelledby="tab-inventario" hidden>
+  <div class="inv-lista" id="inv-lista"></div>
+  <div class="vacio oculto" id="inv-vacio">
+    <span class="vacio__emoji" aria-hidden="true">🔍</span>
+    <div class="vacio__titulo">Nada con ese nombre</div>
+    <div class="vacio__sub">Puede que aún no lo hayáis dado de alta</div>
+  </div>
+</section>
+
+<div class="velo-inferior" aria-hidden="true"></div>
+
+<div class="flotante">
+  <label class="buscador">
+    <span aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20.2 20.2-3.6-3.6"/></svg>
+    </span>
+    <input type="search" id="donde" placeholder="Dónde está..." aria-label="Buscar un ítem" autocomplete="off" autocorrect="off" spellcheck="false">
+  </label>
+  <span class="fab" aria-label="Añadir ítem" onclick="location.href='prueba-medkit-anadir.html?desde=home'">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 4.5v15M4.5 12h15"/></svg>
+  </span>
+</div>
+
+<script>
+(function () {
+  const nav = document.querySelector('.pestanas');
+  const tabs = [...nav.querySelectorAll('.pestanas__tab')];
+  const paneles = tabs.map(t => document.getElementById(t.getAttribute('aria-controls')));
+  const reducida = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const CLAVE_TAB = 'cajas.pestana';
+  function guardarTab(i) {
+    try { localStorage.setItem(CLAVE_TAB, String(i)); } catch (e) { /* sin almacenamiento */ }
+  }
+  function leerTab() {
+    try { return localStorage.getItem(CLAVE_TAB) === '1' ? 1 : 0; } catch (e) { return 0; }
+  }
+
+  function activar(i) {
+    guardarTab(i);
+    if (tabs[i].getAttribute('aria-selected') === 'true') return;
+    nav.dataset.activa = i;
+    tabs.forEach((t, j) => {
+      t.setAttribute('aria-selected', j === i ? 'true' : 'false');
+      t.tabIndex = j === i ? 0 : -1;
+    });
+    paneles.forEach((p, j) => {
+      if (j === i) {
+        p.hidden = false;
+        if (!reducida) {
+          p.classList.add('panel--entrando');
+          requestAnimationFrame(() => requestAnimationFrame(() =>
+            p.classList.remove('panel--entrando')));
+        }
+      } else {
+        p.hidden = true;
+      }
+    });
+  }
+
+  const INVENTARIO = [
+    { emoji: '🧽', nombre: 'Estropajos', cajas: [['02', 3], ['03', 2], ['07', 2]] },
+    { emoji: '🔋', nombre: 'Pilas AA', cajas: [['04', 8], ['07', 4]] },
+    { emoji: '🪥', nombre: 'Cepillos de dientes', cajas: [['01', 4]] },
+    { emoji: '💡', nombre: 'Bombillas LED', cajas: [['04', 5], ['05', 2], ['07', 3]] },
+    { emoji: '🧻', nombre: 'Papel de cocina', cajas: [['02', 4], ['03', 2]] },
+    { emoji: '🧴', nombre: 'Gel de ducha', cajas: [['01', 2]] },
+    { emoji: '🫧', nombre: 'Champú', cajas: [['01', 3], ['07', 1]] },
+    { emoji: '🕯️', nombre: 'Velas', cajas: [['03', 2], ['07', 2]] },
+    { emoji: '🧼', nombre: 'Jabón de manos', cajas: [['01', 2]] },
+    { emoji: '🗑️', nombre: 'Bolsas de basura', cajas: [['02', 6]] },
+    { emoji: '👕', nombre: 'Plancha', cajas: [['07', null]] },
+    { emoji: '🔨', nombre: 'Taladro', cajas: [['05', null]] },
+    { emoji: '🎾', nombre: 'Raqueta', cajas: [['06', null]] },
+    { emoji: '🧣', nombre: 'Manta', cajas: [['08', null]] },
+  ];
+
+  function esc(t) {
+    return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  /* La subcadena que coincide va en negrita */
+  function resaltar(nombre, filtro) {
+    if (!filtro) return esc(nombre);
+    const i = nombre.toLowerCase().indexOf(filtro);
+    if (i < 0) return esc(nombre);
+    return esc(nombre.slice(0, i)) + '<b>' + esc(nombre.slice(i, i + filtro.length)) +
+      '</b>' + esc(nombre.slice(i + filtro.length));
+  }
+
+  function pintarInventario(filtro) {
+    const lista = document.getElementById('inv-lista');
+    const vacio = document.getElementById('inv-vacio');
+    const f = (filtro || '').toLowerCase();
+    const ítems = INVENTARIO.filter(o => !f || o.nombre.toLowerCase().includes(f));
+    lista.innerHTML = ítems.map(o => {
+      const total = o.cajas.reduce((a, c) => a + (c[1] || 1), 0);
+      const unidades = o.cajas[0][1] === null ? 'Único' : total + (total === 1 ? ' unidad' : ' unidades');
+      const chips = o.cajas.map(([num, n]) =>
+        `<a class="chip-caja" href="prueba-medkit-caja.html">${num}${n ? ' <span class="x">×' + n + '</span>' : ''}</a>`).join('');
+      return `<div class="inv-fila" data-objeto style="cursor: pointer;">
+        <span class="mini" aria-hidden="true">${o.emoji}</span>
+        <div class="inv-texto">
+          <div class="inv-nombre">${resaltar(o.nombre, f)}</div>
+          <div class="inv-meta">${unidades} · ${o.cajas.length} ${o.cajas.length === 1 ? 'caja' : 'cajas'}</div>
+        </div>
+        <div class="inv-cajas">${chips}</div>
+      </div>`;
+    }).join('');
+    vacio.classList.toggle('oculto', ítems.length > 0);
+  }
+  pintarInventario('');
+
+  /* El buscador flotante ES el buscador del inventario: al escribir, salta a la pestaña */
+  /* Al empezar a escribir saltamos a Inventario, pero recordamos de dónde
+     veníamos: si vacías el campo, vuelves a tu pestaña. */
+  let pestanaPrevia = null;
+  function engancharBuscador(campo) {
+    if (!campo) return;
+    campo.addEventListener('input', () => {
+      const texto = campo.value.trim();
+      if (texto) {
+        if (pestanaPrevia === null) pestanaPrevia = Number(nav.dataset.activa) || 0;
+        if (tabs[1].getAttribute('aria-selected') !== 'true') activar(1);
+      } else if (pestanaPrevia !== null) {
+        activar(pestanaPrevia);
+        pestanaPrevia = null;
+      }
+      pintarInventario(texto);
+    });
+  }
+  document.getElementById('inv-lista').addEventListener('click', e => {
+    if (e.target.closest('.chip-caja')) return; /* el chip va a su caja */
+    if (e.target.closest('.inv-fila')) location.href = 'prueba-medkit-objeto.html';
+  });
+
+  engancharBuscador(document.getElementById('donde'));
+  engancharBuscador(document.getElementById('donde-desktop'));
+
+  // Tocar una tarjeta lleva al detalle de la caja (demo de flujo)
+  document.querySelectorAll('.caja').forEach(c => {
+    c.addEventListener('click', () => { location.href = 'prueba-medkit-caja.html'; });
+  });
+
+  /* Sin cajas todavía: no pasa con estos datos, pero la pantalla existe */
+  if (!document.querySelectorAll('.reticula .caja').length) {
+    document.getElementById('cajas-vacio').classList.remove('oculto');
+  }
+
+  /* "/" enfoca el buscador que esté a la vista */
+  document.addEventListener('keydown', e => {
+    if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+    const a = document.activeElement;
+    if (a && /^(input|textarea|select)$/i.test(a.tagName)) return;
+    const visible = [document.getElementById('donde-desktop'), document.getElementById('donde')]
+      .find(c => c && c.offsetParent !== null);
+    if (!visible) return;
+    e.preventDefault();
+    visible.focus();
+  });
+
+  /* Volvemos a la pestaña en la que estabas (p. ej. al volver de un ítem) */
+  activar(leerTab());
+
+  tabs.forEach((t, i) => {
+    t.addEventListener('click', () => activar(i));
+    t.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const n = (i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length;
+        activar(n);
+        tabs[n].focus();
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

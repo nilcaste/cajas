@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Añadir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="ui.js"></script>
+</head>
+<body data-seccion="anadir" data-pie="resumen">
+
+<header class="cabecera">
+  <a class="cabecera__accion" href="cajas.html" id="volver" aria-label="Volver"></a>
+  <div class="selector-caja">
+    <span>Añadir a</span>
+    <select id="sel-caja" aria-label="Caja de destino"></select>
+  </div>
+</header>
+
+<p class="destino-nombre" id="destino-nombre"></p>
+
+<div class="campo campo--grande">
+  <span class="destello" id="icono-buscar" aria-hidden="true"></span>
+  <input type="search" id="q" placeholder="Buscar en el catálogo…" autofocus
+         autocomplete="off" autocorrect="off" spellcheck="false"
+         aria-label="Buscar un objeto del catálogo">
+  <button type="button" class="limpiar oculto" id="limpiar" aria-label="Limpiar búsqueda">✕</button>
+</div>
+
+<section id="bloque-recientes">
+  <div class="titulo-seccion"><h2>Recientes</h2></div>
+  <div class="chips" id="recientes"></div>
+</section>
+
+<div class="titulo-seccion"><h2 id="titulo-resultados">Todo el catálogo</h2></div>
+<ul class="lista" id="resultados"></ul>
+
+<div class="crear oculto" id="crear">
+  <button type="button" class="crear__disparador" id="crear-disparador">
+    <span class="crear__mas" id="crear-mas" aria-hidden="true"></span>
+    <span>Crear <b id="crear-texto"></b><br><small class="secundario">Alta nueva en el catálogo</small></span>
+  </button>
+  <div class="crear__cuerpo oculto" id="crear-cuerpo">
+    <label class="campo-form">
+      <span>Nombre</span>
+      <input type="text" id="crear-nombre" autocomplete="off">
+    </label>
+
+    <label class="toggle">
+      <span class="toggle__texto">¿Suministro?
+        <small>Se compra a menudo y lleva cantidad</small>
+      </span>
+      <input type="checkbox" id="crear-suministro" checked>
+      <span class="toggle__pista" aria-hidden="true"></span>
+    </label>
+
+    <div class="selector-imagen">
+      <span class="etiqueta-campo">Foto o emoji</span>
+      <div class="selector-imagen__fila">
+        <span class="miniatura" id="crear-miniatura">
+          <span class="miniatura__glifo" id="crear-glifo" aria-hidden="true">📦</span>
+          <span class="miniatura__ok oculto" id="crear-ok" aria-hidden="true"></span>
+        </span>
+        <div class="selector-imagen__botones">
+          <button type="button" class="btn btn--peq" id="crear-foto">Hacer foto</button>
+          <button type="button" class="btn btn--peq" id="crear-elegir-emoji" aria-expanded="false">Elegir emoji</button>
+        </div>
+      </div>
+      <small class="nota-foto oculto" id="crear-nota">Foto guardada (maqueta)</small>
+      <div class="rejilla-emojis oculto" id="rejilla-emojis" role="group" aria-label="Elegir un emoji"></div>
+    </div>
+
+    <button type="button" class="btn btn--primario btn--bloque" id="crear-confirmar" style="margin-top:18px;">
+      Crear y añadir a la caja
+    </button>
+  </div>
+</div>
+
+<div class="vacio oculto" id="sin-resultados">
+  <span class="vacio__emoji">🔎</span>
+  <strong>Nada en el catálogo con ese nombre</strong>
+  Créalo aquí abajo y quedará para siempre.
+</div>
+
+<div class="barra-inferior">
+  <div class="barra-resumen">
+    <span class="barra-resumen__texto" id="resumen">
+      Nada añadido todavía
+      <small id="resumen-detalle">Toca un objeto para meterlo en la caja</small>
+    </span>
+    <a class="btn btn--primario btn--peq" id="hecho" href="caja.html">Hecho</a>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  let caja = Datos.caja(UI.cajaActual());
+
+  const q = document.getElementById('q');
+  const limpiar = document.getElementById('limpiar');
+  const resultados = document.getElementById('resultados');
+  const bloqueRecientes = document.getElementById('bloque-recientes');
+  const tituloResultados = document.getElementById('titulo-resultados');
+  const sinResultados = document.getElementById('sin-resultados');
+  const crear = document.getElementById('crear');
+  const crearTexto = document.getElementById('crear-texto');
+  const crearCuerpo = document.getElementById('crear-cuerpo');
+  const crearNombre = document.getElementById('crear-nombre');
+  const crearSuministro = document.getElementById('crear-suministro');
+  const resumen = document.getElementById('resumen');
+  const resumenDetalle = document.getElementById('resumen-detalle');
+  const selCaja = document.getElementById('sel-caja');
+
+  document.getElementById('volver').innerHTML = UI.icono('atras', 24);
+  document.getElementById('icono-buscar').innerHTML = UI.icono('destello', 22);
+  document.getElementById('crear-mas').innerHTML = UI.icono('anadir', 22);
+
+  /* Selector de caja: la pantalla funciona con caja predefinida (?caja=NN)
+     o eligiéndola aquí, para poder llegar desde el "+" del menú. */
+  selCaja.innerHTML = CAJAS.map(c =>
+    `<option value="${UI.esc(c.num)}">CAJA ${UI.esc(c.num)}</option>`
+  ).join('');
+  selCaja.value = caja.num;
+
+  function actualizarDestino() {
+    document.getElementById('volver').href = 'caja.html?caja=' + encodeURIComponent(caja.num);
+    document.getElementById('hecho').href = 'caja.html?caja=' + encodeURIComponent(caja.num);
+    document.title = 'Añadir a CAJA ' + caja.num;
+    document.getElementById('destino-nombre').textContent = caja.nombre + ' · ' + caja.ubicacion;
+  }
+
+  selCaja.addEventListener('change', function () {
+    caja = Datos.caja(selCaja.value);
+    anadidos.clear();
+    actualizarDestino();
+    actualizarResumen();
+    pintar();
+    UI.toast('Añadiendo a la CAJA ' + caja.num);
+  });
+
+  /* Cuántas unidades se han añadido en esta sesión, por objeto */
+  const anadidos = new Map();
+
+  function enLaCaja(id) {
+    const linea = STOCK.find(s => s.caja === caja.num && s.objeto === id);
+    return linea ? linea.cantidad : 0;
+  }
+
+  function filaHTML(objeto) {
+    const sumado = anadidos.get(objeto.id) || 0;
+    const hay = enLaCaja(objeto.id);
+    let meta;
+    if (objeto.suministro) {
+      meta = hay ? `Suministro · ${hay} en esta caja` : 'Suministro';
+    } else {
+      meta = hay ? 'Único · ya en esta caja' : 'Único';
+    }
+
+    let control;
+    if (objeto.suministro && sumado > 0) {
+      /* Con añadidos de esta sesión: mini-stepper para poder rectificar */
+      control = `<div class="stepper stepper--sesion">
+          <button type="button" data-accion="menos"
+                  aria-label="Quitar una de las unidades de ${UI.esc(objeto.nombre)} añadidas ahora">${UI.icono('quitar', 18)}</button>
+          <output aria-label="Unidades de ${UI.esc(objeto.nombre)} añadidas ahora">+${sumado}</output>
+          <button type="button" data-accion="mas"
+                  aria-label="Añadir otra unidad de ${UI.esc(objeto.nombre)}">${UI.icono('anadir', 18)}</button>
+        </div>`;
+    } else if (objeto.suministro) {
+      control = `<button type="button" class="btn-mas" data-accion="mas"
+                aria-label="Añadir una unidad de ${UI.esc(objeto.nombre)} a la caja ${caja.num}">${UI.icono('anadir', 20)}</button>`;
+    } else if (sumado > 0) {
+      /* Único añadido ahora: se puede deshacer */
+      control = `<button type="button" class="chip chip--ok" data-accion="deshacer" aria-pressed="true"
+                aria-label="Quitar ${UI.esc(objeto.nombre)} de la caja ${caja.num}">Añadido</button>`;
+    } else if (hay) {
+      control = `<span class="contador-mas">✓</span>`;
+    } else {
+      control = `<button type="button" class="btn btn--peq" data-accion="unico">Añadir</button>`;
+    }
+
+    const marcada = (!objeto.suministro && hay) ? ' fila--anadida' : '';
+
+    return `<li class="fila${marcada}" data-id="${UI.esc(objeto.id)}">
+      <span class="foto" aria-hidden="true">${objeto.emoji}</span>
+      <div class="fila__texto">
+        <div class="fila__nombre">${UI.esc(objeto.nombre)}</div>
+        <div class="fila__meta">${meta}</div>
+      </div>
+      ${control}
+    </li>`;
+  }
+
+  function pintarRecientes() {
+    document.getElementById('recientes').innerHTML = RECIENTES.map(id => {
+      const o = Datos.objeto(id);
+      if (!o) return '';
+      const sumado = anadidos.get(o.id) || 0;
+      return `<button type="button" class="chip${sumado ? ' chip--ok' : ''}" data-id="${o.id}" data-accion="chip">
+        <span class="chip__emoji" aria-hidden="true">${o.emoji}</span>${UI.esc(o.nombre)}${sumado ? ` +${sumado}` : ''}
+      </button>`;
+    }).join('');
+  }
+
+  function pintar() {
+    const texto = q.value.trim();
+    const hayTexto = texto.length > 0;
+
+    limpiar.classList.toggle('oculto', !hayTexto);
+    bloqueRecientes.classList.toggle('oculto', hayTexto);
+
+    const lista = hayTexto ? Datos.buscar(texto) : CATALOGO.slice();
+    tituloResultados.textContent = hayTexto ? 'Resultados' : 'Todo el catálogo';
+    resultados.innerHTML = lista.map(filaHTML).join('');
+
+    sinResultados.classList.toggle('oculto', lista.length > 0 || !hayTexto);
+
+    /* "Crear «texto»" siempre al final de los resultados cuando se ha escrito algo */
+    crear.classList.toggle('oculto', !hayTexto);
+    if (hayTexto) {
+      crearTexto.textContent = '«' + texto + '»';
+      if (crearCuerpo.classList.contains('oculto')) crearNombre.value = texto;
+    } else {
+      crearCuerpo.classList.add('oculto');
+    }
+
+    pintarRecientes();
+  }
+
+  function actualizarResumen() {
+    let unidades = 0;
+    anadidos.forEach(n => { unidades += n; });
+    if (!unidades) {
+      resumen.childNodes[0].nodeValue = 'Nada añadido todavía';
+      resumenDetalle.textContent = 'Toca un objeto para meterlo en la caja';
+    } else {
+      resumen.childNodes[0].nodeValue = UI.plural(unidades, 'unidad añadida', 'unidades añadidas');
+      resumenDetalle.textContent = 'a la CAJA ' + caja.num;
+    }
+  }
+
+  /* Repintado quirúrgico: la fila se queda donde está para poder repetir toque */
+  function repintarFila(objeto, li) {
+    if (!li) return;
+    const nuevo = document.createElement('div');
+    nuevo.innerHTML = filaHTML(objeto);
+    li.replaceWith(nuevo.firstElementChild);
+    const actualizada = resultados.querySelector(`[data-id="${objeto.id}"]`);
+    if (actualizada) actualizada.classList.add('fila--pulso');
+  }
+
+  function anadir(objeto, li) {
+    Datos.anadir(caja.num, objeto.id, 1);
+    anadidos.set(objeto.id, (anadidos.get(objeto.id) || 0) + 1);
+    actualizarResumen();
+    UI.toast(objeto.nombre + ' → CAJA ' + caja.num);
+    repintarFila(objeto, li);
+    pintarRecientes();
+  }
+
+  /* Resta SOLO de lo añadido en esta sesión; nunca toca lo que ya había en la caja */
+  function quitarUno(objeto, li) {
+    const sumado = anadidos.get(objeto.id) || 0;
+    if (!sumado) return;
+
+    Datos.fijar(caja.num, objeto.id, enLaCaja(objeto.id) - 1);
+    if (sumado - 1 <= 0) anadidos.delete(objeto.id);
+    else anadidos.set(objeto.id, sumado - 1);
+
+    actualizarResumen();
+    UI.toast(objeto.nombre + ' — quitado');
+    repintarFila(objeto, li);
+    pintarRecientes();
+  }
+
+  resultados.addEventListener('click', function (e) {
+    const boton = e.target.closest('[data-accion]');
+    if (!boton) return;
+    const li = boton.closest('.fila');
+    const objeto = Datos.objeto(li.dataset.id);
+    const accion = boton.dataset.accion;
+    if (accion === 'menos' || accion === 'deshacer') quitarUno(objeto, li);
+    else anadir(objeto, li);
+  });
+
+  document.getElementById('recientes').addEventListener('click', function (e) {
+    const chip = e.target.closest('[data-accion="chip"]');
+    if (!chip) return;
+    const objeto = Datos.objeto(chip.dataset.id);
+    anadir(objeto, resultados.querySelector(`[data-id="${objeto.id}"]`));
+  });
+
+  q.addEventListener('input', pintar);
+  limpiar.addEventListener('click', function () { q.value = ''; pintar(); q.focus(); });
+
+  document.getElementById('crear-disparador').addEventListener('click', function () {
+    crearCuerpo.classList.toggle('oculto');
+    if (!crearCuerpo.classList.contains('oculto')) {
+      crearNombre.value = q.value.trim();
+      reiniciarImagen();
+      crearNombre.focus();
+    }
+  });
+
+  /* ---------- Foto o emoji del objeto nuevo ---------- */
+
+  const EMOJIS = ['🧽','🪥','🧴','🧻','🔋','💡','🕯️','🧺','🔨','🪛',
+                  '🎾','🧣','🩹','🧦','🔌','🧯','🪣','🧹','🧼','📦'];
+
+  const miniatura = document.getElementById('crear-miniatura');
+  const glifo = document.getElementById('crear-glifo');
+  const puntoOk = document.getElementById('crear-ok');
+  const notaFoto = document.getElementById('crear-nota');
+  const rejillaEmojis = document.getElementById('rejilla-emojis');
+  const botonEmoji = document.getElementById('crear-elegir-emoji');
+
+  let imagen = null; /* {tipo:'emoji', valor} | {tipo:'foto'} */
+
+  rejillaEmojis.innerHTML = EMOJIS.map(e =>
+    `<button type="button" class="emoji-opcion" data-emoji="${e}" aria-pressed="false" aria-label="Usar ${e}">${e}</button>`
+  ).join('');
+
+  function reiniciarImagen() {
+    imagen = null;
+    glifo.textContent = '📦';
+    miniatura.classList.remove('miniatura--elegida');
+    puntoOk.classList.add('oculto');
+    notaFoto.classList.add('oculto');
+    rejillaEmojis.classList.add('oculto');
+    botonEmoji.setAttribute('aria-expanded', 'false');
+    rejillaEmojis.querySelectorAll('.emoji-opcion').forEach(b => b.setAttribute('aria-pressed', 'false'));
+  }
+
+  botonEmoji.addEventListener('click', function () {
+    const abierta = rejillaEmojis.classList.toggle('oculto') === false;
+    botonEmoji.setAttribute('aria-expanded', abierta ? 'true' : 'false');
+  });
+
+  rejillaEmojis.addEventListener('click', function (e) {
+    const boton = e.target.closest('[data-emoji]');
+    if (!boton) return;
+    imagen = { tipo: 'emoji', valor: boton.dataset.emoji };
+    rejillaEmojis.querySelectorAll('.emoji-opcion').forEach(b => b.setAttribute('aria-pressed', 'false'));
+    boton.setAttribute('aria-pressed', 'true');
+    glifo.textContent = imagen.valor;
+    miniatura.classList.add('miniatura--elegida');
+    puntoOk.classList.add('oculto');
+    notaFoto.classList.add('oculto');
+  });
+
+  document.getElementById('crear-foto').addEventListener('click', function () {
+    imagen = { tipo: 'foto' };
+    glifo.textContent = '🖼️';
+    miniatura.classList.add('miniatura--elegida');
+    puntoOk.classList.remove('oculto');
+    notaFoto.classList.remove('oculto');
+    rejillaEmojis.classList.add('oculto');
+    botonEmoji.setAttribute('aria-expanded', 'false');
+    rejillaEmojis.querySelectorAll('.emoji-opcion').forEach(b => b.setAttribute('aria-pressed', 'false'));
+  });
+
+  document.getElementById('crear-confirmar').addEventListener('click', function () {
+    const nombre = crearNombre.value.trim();
+    if (!nombre) { crearNombre.focus(); return; }
+    const emoji = imagen ? (imagen.tipo === 'foto' ? '🖼️' : imagen.valor) : '📦';
+    const objeto = Datos.crearObjeto(nombre, crearSuministro.checked, emoji);
+    Datos.anadir(caja.num, objeto.id, 1);
+    anadidos.set(objeto.id, 1);
+    crearCuerpo.classList.add('oculto');
+    reiniciarImagen();
+    q.value = '';
+    pintar();
+    actualizarResumen();
+    UI.toast(objeto.nombre + ' creado y añadido');
+    q.focus();
+  });
+
+  actualizarDestino();
+  pintar();
+  actualizarResumen();
+})();
+</script>
+</body>
+</html>
